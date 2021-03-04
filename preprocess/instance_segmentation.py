@@ -8,7 +8,7 @@ scene_name = 'scene0000_00'
 dir_name = os.path.join(base_dir_name, scene_name)
 
 instance_descriptor_name = os.path.join(dir_name, 'scene0000_00.aggregation.json') 
-ply_name = os.path.join(dir_name, 'scene0000_00_vh_clean.ply')
+ply_name = os.path.join(dir_name, 'scene0000_00_vh_clean_3.ply')
 part_dir = os.path.join(dir_name, 'instances')
 if not os.path.exists(part_dir):
     os.mkdir(part_dir)
