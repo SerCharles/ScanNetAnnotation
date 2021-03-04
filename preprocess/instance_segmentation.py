@@ -25,6 +25,7 @@ vertexs = plydata['vertex']
 with open(vertex_info_name, 'r', encoding = 'utf8')as fp:
     vertex_info = json.load(fp)['segIndices']
 
+print(len(vertex_info))
 
 vertex_segments_dict = {}
 
@@ -34,8 +35,11 @@ for i in range(len(vertex_info)):
         vertex_segments_dict[item].append(i)
     else: 
         vertex_segments_dict[item] = []
+        vertex_segments_dict[item].append(i)
 
 
+
+count = 0
 for item in instances:
     vertex_group_list = item['segments']
     item_id = str(item['objectId'])
@@ -46,6 +50,14 @@ for item in instances:
     txt = open(descript_name, 'w')
     point_num = 0
     for group in vertex_group_list:
+
+
+        count += 1
+        r = 256 - ((count // 256) * 16) % 256
+        seg_redux = count - (count // 256) * 256
+        g = 256 - ((seg_redux // 16) * 16) % 256
+        b = 256 - ((seg_redux % 16) * 16) % 256
+
         point_list = vertex_segments_dict[group]
         point_num += len(point_list)
         for i in point_list:
@@ -55,6 +67,11 @@ for item in instances:
             nx = vertexs[i]['nx']
             ny = vertexs[i]['ny']
             nz = vertexs[i]['nz']
+
+            vertexs[i]['red'] = r
+            vertexs[i]['green'] = g
+            vertexs[i]['blue'] = b
+
             pwn.write(str(x) + ' ')
             pwn.write(str(y) + ' ')
             pwn.write(str(z) + ' ')
@@ -66,3 +83,7 @@ for item in instances:
     pwn.close()
     txt.close()
     print("written part", item_id, "total", point_num, "points")
+print(count)
+save_name = 'scene0000_00_vh_clean_test.ply'
+save_place = os.path.join(dir_name, save_name)
+plydata.write(save_place)
