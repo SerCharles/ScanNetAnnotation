@@ -58,7 +58,8 @@ for item in instances:
     for i in range(len(point_list)):
         index[point_list[i]] = i
 
-    for face in faces:
+    for i in range(faces.count):
+        face = faces[i]
         a = face[0][0]
         b = face[0][1]
         c = face[0][2]
@@ -68,6 +69,8 @@ for item in instances:
             place_c = index[c]
             place = [place_a, place_b, place_c]
             face_list.append(place)
+            txt.write(str(i) + '\n')
+
     off.write('OFF\n')
     off.write(str(len(point_list)) + ' ' + str(len(face_list)) + ' ' + '0\n')
     for point in point_list:
@@ -75,7 +78,6 @@ for item in instances:
         y = vertexs[point]['y']
         z = vertexs[point]['z']
         off.write(str(x) + ' ' + str(y) + ' ' + str(z) + '\n')
-        txt.write(str(point) + '\n')
     for face in face_list:
         off.write('3 ' + str(face[0]) + ' ' + str(face[1]) + ' ' + str(face[2]) + '\n')
     off.close()
