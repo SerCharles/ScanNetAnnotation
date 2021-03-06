@@ -38,7 +38,7 @@ for i in range(len(seg_name_list)):
     point_name_full = os.path.join(part_dir, point_name)
 
     #读每个seg信息，赋值
-    '''
+    
     file = open(seg_name_full, 'r')
     data = file.readlines()
     file.close()
@@ -49,8 +49,8 @@ for i in range(len(seg_name_list)):
             t_point = int(point)
             if segment[t_point] == 0:
                 segment[t_point] = seg_num
+    
     '''
-
     #读剩下的信息，赋值
     file = open(point_name_full, 'r')
     points = file.readlines()
@@ -60,7 +60,7 @@ for i in range(len(seg_name_list)):
         t_point = int(point[:-1])
         if segment[t_point] == 0:
             segment[t_point] = seg_num
-
+    '''
 
 count = 0
 for i in range(len(segment)):
