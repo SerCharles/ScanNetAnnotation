@@ -1,5 +1,6 @@
 import os
 import json
+import numpy as np
 from plyfile import *
 
 #文件夹名
@@ -39,24 +40,74 @@ for i in range(len(vertex_info)):
         vertex_segments_dict[item].append(i)
 
 
+type_use = ['window', 'table', 'kitchen counter', 'desk', 'cabinet', 'floor', 'wall', 'coffee table', 'door', 'ceiling', 'shelf', 'doorframe']
+index_total = [-1] * vertexs.count
+total_useful_points = 0
+show_vertexs = []
 
-count = 0
+point_count = 0
+face_count = 0
+point_list_total = {}
+
+
 for item in instances:
     vertex_group_list = item['segments']
-    item_id = str(item['objectId'])
-    part_name = os.path.join(part_dir, 'part_' + item_id + '.off')
-    descript_name = os.path.join(part_dir, 'part_' + item_id + '.txt')
+    item_id = item['objectId']
+    item_type = item['label']
+    if not item_type in type_use:
+        continue
+    point_list_total[item_id] = []
+    point_list = []
+    for group in vertex_group_list:
+        point_list += vertex_segments_dict[group]
+        point_count += len(vertex_segments_dict[group])
+    for i in range(len(point_list)):
+        index_total[point_list[i]] = total_useful_points
+        point_list_total[item_id].append(total_useful_points)
+        total_useful_points += 1
+        show_vertexs.append(vertexs[point_list[i]])
+print(point_count, face_count)
+
+
+show_faces = []
+for i in range(faces.count):
+    face = faces[i]
+    a = face[0][0]
+    b = face[0][1]
+    c = face[0][2]
+    if index_total[a] >= 0 and index_total[b] >= 0 and index_total[c] >= 0:
+        place_a = index_total[a]
+        place_b = index_total[b]
+        place_c = index_total[c]
+        place = ([place_a, place_b, place_c],)
+        show_faces.append(place)
+print(len(show_vertexs), len(show_faces))
+ 
+show_vertexs = np.array(show_vertexs)
+show_faces = np.array(show_faces, dtype=[('vertex_indices', 'uint32', (3,))])
+new_vertex = PlyElement.describe(show_vertexs, 'vertex')
+new_face = PlyElement.describe(show_faces, 'face')
+show_ply = PlyData([new_vertex, new_face], text = True, byte_order = '<')
+
+save_name = 'scene0000_00_vh_clean_decreased.ply'
+save_place = os.path.join(dir_name, save_name)
+show_ply.write(save_place)
+
+vertexs = show_ply['vertex']
+faces = show_ply['face']
+for (item_id, point_list) in point_list_total.items():
+    part_name = os.path.join(part_dir, 'part_' + str(item_id) + '.off')
+    descript_name = os.path.join(part_dir, 'part_' + str(item_id) + '.txt')
     off = open(part_name, 'w')
     txt = open(descript_name, 'w')
 
-    point_list = []
     face_list = []
     index = [-1] * vertexs.count
-    for group in vertex_group_list:
-        point_list += vertex_segments_dict[group]
-    
+    #print(vertexs.count)
+    #print(len(point_list))
     for i in range(len(point_list)):
-        index[point_list[i]] = i
+        aa = point_list[i]
+        index[aa] = i
 
     for i in range(faces.count):
         face = faces[i]
@@ -69,6 +120,7 @@ for item in instances:
             place_c = index[c]
             place = [place_a, place_b, place_c]
             face_list.append(place)
+            face_count += 1
             txt.write(str(i) + '\n')
 
     off.write('OFF\n')
@@ -83,7 +135,4 @@ for item in instances:
     off.close()
     txt.close()
     print("written part", item_id, "total", len(point_list), "points", len(face_list), 'faces')
-print(count)
-save_name = 'scene0000_00_vh_clean_test.ply'
-save_place = os.path.join(dir_name, save_name)
-plydata.write(save_place)
+    
