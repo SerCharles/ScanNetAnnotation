@@ -11,7 +11,7 @@ import os
 from plyfile import PlyData, PlyElement
 import json
 import glob
-from instance_segmentation import *
+from instance_selection import *
 
 ROOT_FOLDER = "E:\\dataset\\scannet\\scans"
 #ROOT_FOLDER = "/orion/group/ScanNet/scannet/data/scans_train/"
