@@ -12,6 +12,7 @@ from plyfile import PlyData, PlyElement
 import json
 import glob
 from instance_selection import *
+from extract_border import *
 
 ROOT_FOLDER = "E:\\dataset\\scannet\\scans"
 #ROOT_FOLDER = "/orion/group/ScanNet/scannet/data/scans_train/"
@@ -25,6 +26,8 @@ planeDiffThreshold = 0.05
 fittingErrorThreshold = planeDiffThreshold
 orthogonalThreshold = np.cos(np.deg2rad(60))
 parallelThreshold = np.cos(np.deg2rad(30))
+
+
 
 
 
@@ -255,6 +258,8 @@ def mergePlanes(points, planes, planePointIndices, planeSegments, segmentNeighbo
     return groupedPlanes, groupedPlanePointIndices, groupedPlaneSegments
 
 
+
+
 def readMesh(scene_id):
     print(scene_id)
 
@@ -397,7 +402,7 @@ def readMesh(scene_id):
     planeGroups = []
     print('num groups', len(groupSegments))
 
-    debug = True
+    debug = False
     debugIndex = -1
     
     for groupIndex, group in enumerate(groupSegments):
@@ -580,16 +585,12 @@ def readMesh(scene_id):
         planeGroups.append(groupPlanes)
         continue
     
+    colorMap = ColorPalette(segmentation.max() + 2).getColorMap()
+    colorMap[-1] = 0
+    colorMap[-2] = 255
     if debug:
-        colorMap = ColorPalette(segmentation.max() + 2).getColorMap()
-        colorMap[-1] = 0
-        colorMap[-2] = 255
         annotationFolder = os.path.join(ROOT_FOLDER, scene_id, 'test', 'PlaneRCNN')
     else:
-        numPlanes = sum([len(group) for group in planeGroups])
-        segmentationColor = (np.arange(numPlanes + 1) + 1) * 100
-        colorMap = np.stack([segmentationColor / (256 * 256), segmentationColor / 256 % 256, segmentationColor % 256], axis=1)
-        colorMap[-1] = 0
         annotationFolder = os.path.join(ROOT_FOLDER, scene_id, 'annotation', 'PlaneRCNN')
         pass
 
@@ -717,6 +718,10 @@ def readMesh(scene_id):
     planesD = 1.0 / np.maximum(np.linalg.norm(planes, axis=-1, keepdims=True), 1e-4)
     planes *= pow(planesD, 2)
     
+    #求任意两个平面的边界
+    borderPointIndices, borderLines = getBorder(len(planePointIndices), planeSegmentation, points, faces)
+
+
     removeIndices = []
     for faceIndex in range(faces.shape[0]):
         face = faces[faceIndex]
