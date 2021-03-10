@@ -19,20 +19,47 @@ def getLineIndex(planeIndexA, planeIndexB, planes):
 
 
 
-def residuals(p, X, Y):
-    loss = 0
-    for i in range(len(X)):
-        x = X[i]
-        y = Y[i]
-        loss += (y - p[0] * x[0] - p[1] * x[1] - p[2] * x[2] - p[3]) ** 2
+def residuals(p, points):
+    '''
+    description: get the residuals, used in line fitting
+    parameters: params(a, b, x0, y0); points(x, y, z)
+    return: loss, length is 2n 
+    '''
+    n = points.shape[0]
+    loss = np.zeros(2 * n)
+    a, b, x0, y0 = p
+    for i in range(n):
+        x = points[i][0]
+        y = points[i][1]
+        z = points[i][2]
+
+        loss_1 = a * z + x0 - x
+        loss_2 = b * z + y0 - y
+        loss[2 * i] = loss_1
+        loss[2 * i + 1] = loss_2
     return loss
 
 
+
 def fit_line(points):
-    Y = np.zeros(points.shape[0])
+    '''
+    description: fit the line based on all points
+    parameters:points(x, y, z)
+    return: (m, n, p, x0, y0, z0) 
+    s.t. (x, y, z) = (mt + x0, nt + y0, pt + z0)
+    '''
+    n = points.shape[0]
+    
+    if n == 1:
+        return np.array([0, 0, 0, points[0][0], points[0][1], points[0][2]])
+    
+    #par: a, b, x0, y0
+    #x = x0 + az, y = y0 + bz
     pars = np.random.rand(4) 
-    r = leastsq(residuals, pars, args = (points, Y))   # 三个参数：误差函数、函数参数列表、数据点
-    return r
+    new_pars = leastsq(residuals, pars, args = (points))[0]
+    a, b, x0, y0 = new_pars
+    return np.array([a, b, 1, x0, y0, 0])
+
 
 
 
@@ -87,7 +114,7 @@ def getBorder(planes, planeSegmentation, points, faces):
     #regress all lines
     for i in range(len(lines_point)):
         points = lines_point[i]
-        lines_parameter.append(fit_line(points)[0])
+        lines_parameter.append(fit_line(points))
     lines_parameter = np.array(lines_parameter)
 
 
