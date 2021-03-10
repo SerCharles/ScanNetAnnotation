@@ -6,7 +6,7 @@ from scipy.optimize import leastsq
 from plyfile import PlyData, PlyElement
 import json
 import glob
-
+from math import *
 
 def getPlaneIndex(lineIndex, planes):
     return lineIndex // planes, lineIndex % planes
@@ -16,49 +16,49 @@ def getLineIndex(planeIndexA, planeIndexB, planes):
     maxi = max(planeIndexA, planeIndexB)
     return mini * planes + maxi
 
+def getDist(a, b):
+    return sqrt(np.sum((a - b) ** 2, axis = 0))
 
-
-
-def residuals(p, points):
+def getMinTree(points):
     '''
-    description: get the residuals, used in line fitting
-    parameters: params(a, b, x0, y0); points(x, y, z)
-    return: loss, length is 2n 
+    description: get the min generated tree of the points
+    parameter: points
+    return: the tree
     '''
     n = points.shape[0]
-    loss = np.zeros(2 * n)
-    a, b, x0, y0 = p
+    edges = np.zeros((n, n))
+    visit = [False] * n
+    v_new = []
+    e_new = []
     for i in range(n):
-        x = points[i][0]
-        y = points[i][1]
-        z = points[i][2]
+        a = points[i]
+        for j in range(n):
+            b = points[j]
+            edges[i][j] = getDist(a, b)
 
-        loss_1 = a * z + x0 - x
-        loss_2 = b * z + y0 - y
-        loss[2 * i] = loss_1
-        loss[2 * i + 1] = loss_2
-    return loss
+    v_new.append(0)
+    visit[0] = True
+    for ii in range(n - 1):
+        min_dist = 1145141919810
+        min_u = -1
+        min_v = -1
 
-
-
-def fit_line(points):
-    '''
-    description: fit the line based on all points
-    parameters:points(x, y, z)
-    return: (m, n, p, x0, y0, z0) 
-    s.t. (x, y, z) = (mt + x0, nt + y0, pt + z0)
-    '''
-    n = points.shape[0]
-    
-    if n == 1:
-        return np.array([0, 0, 0, points[0][0], points[0][1], points[0][2]])
-    
-    #par: a, b, x0, y0
-    #x = x0 + az, y = y0 + bz
-    pars = np.random.rand(4) 
-    new_pars = leastsq(residuals, pars, args = (points))[0]
-    a, b, x0, y0 = new_pars
-    return np.array([a, b, 1, x0, y0, 0])
+        for i in [0, -1]:
+            u = v_new[i]
+            for v in range(n):
+                if visit[v] == False:
+                    dist = edges[u][v]
+                    if dist < min_dist:
+                        min_dist = dist
+                        min_u = u
+                        min_v = v
+        visit[min_v] = True
+        e_new.append((min_u, min_v))
+        if min_u == v_new[0]:
+            v_new.insert(0, min_v)
+        elif min_u == v_new[-1]:
+            v_new.append(min_v)
+    return v_new
 
 
 
@@ -72,7 +72,7 @@ def getBorder(planes, planeSegmentation, points, faces):
     lines = []
     useful_line_indexs = []
     lines_point = []
-    lines_parameter = []
+    lines_result = []
     for i in range(planes ** 2):
         lines.append(set())
 
@@ -111,14 +111,16 @@ def getBorder(planes, planeSegmentation, points, faces):
             lines_point.append(new_point_list)
 
     lines_point = np.array(lines_point)
-    #regress all lines
-    for i in range(len(lines_point)):
-        points = lines_point[i]
-        lines_parameter.append(fit_line(points))
-    lines_parameter = np.array(lines_parameter)
+    for points in lines_point:
+        min_tree = getMinTree(points)
+        edge_list = []
+        for i in range(len(min_tree) - 1):
+            edge_list.append((min_tree[i], min_tree[i + 1]))
+        lines_result.append(edge_list)
+    
 
-
-    return lines_point, lines_parameter
+    kebab = 0
+    return lines_point, lines_result
 
         
 

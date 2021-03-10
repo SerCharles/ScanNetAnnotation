@@ -716,7 +716,7 @@ def readMesh(scene_id):
     planes = np.array(planes)
     print('number of planes: ', planes.shape[0])
     planesD = 1.0 / np.maximum(np.linalg.norm(planes, axis=-1, keepdims=True), 1e-4)
-    planes *= pow(planesD, 2)
+    planes *= (planesD ** 2)
     
     #求任意两个平面的边界
     borderPointIndices, borderLines = getBorder(len(planePointIndices), planeSegmentation, points, faces)
