@@ -118,9 +118,21 @@ def getBorder(planes, planeSegmentation, points, faces):
             edge_list.append((min_tree[i], min_tree[i + 1]))
         lines_result.append(edge_list)
     
+    all_new_points = []
+    all_new_edges = []
+    for i in range(len(lines_point)):
+        points = lines_point[i]
+        edges = lines_result[i]
+        current_point_num_base = len(all_new_points)
+        for point in points:
+            all_new_points.append(point)
+        for edge in edges:
+            a, b = edge
+            new_a = a + current_point_num_base
+            new_b = b + current_point_num_base
+            all_new_edges.append((new_a, new_b))
 
-    kebab = 0
-    return lines_point, lines_result
+    return all_new_points, all_new_edges
 
         
 
