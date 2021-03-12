@@ -19,17 +19,19 @@ def getLineIndex(planeIndexA, planeIndexB, planes):
 def getDist(a, b):
     return sqrt(np.sum((a - b) ** 2, axis = 0))
 
-def getMinTree(points):
+def getMinTree(points, threshold):
     '''
     description: get the min generated tree of the points
-    parameter: points
+    parameter: points, threshold that the line will be splited
     return: the tree
     '''
     n = points.shape[0]
     edges = np.zeros((n, n))
     visit = [False] * n
     v_new = []
+    dists = []
     e_new = []
+    real_edge_lists = []
     for i in range(n):
         a = points[i]
         for j in range(n):
@@ -56,12 +58,47 @@ def getMinTree(points):
         e_new.append((min_u, min_v))
         if min_u == v_new[0]:
             v_new.insert(0, min_v)
+            dists.insert(0, min_dist)
         elif min_u == v_new[-1]:
             v_new.append(min_v)
-    return v_new
+            dists.append(min_dist)
+    cutting_places = []
+    for i in range(len(v_new) - 1):
+        if dists[i] > threshold:
+            cutting_places.append(i)
+    cutting_places.append(len(v_new) - 1)
+    start = 0
+    for end in cutting_places:
+        real_edge_lists.append(v_new[start:end])
+        start = end + 1
+    return real_edge_lists
 
 
-
+def getMaxEdgeLength(points, faces):
+    '''
+    description: get the max edge length of all faces
+    parameter: points, faces
+    return: max_length
+    '''
+    max_length = 0
+    for faceIndex in range(faces.shape[0]):
+        face = faces[faceIndex]
+        a = face[0]
+        b = face[1]
+        c = face[2]
+        point_a = points[a]
+        point_b = points[b]
+        point_c = points[c]
+        dist_ab = getDist(point_a, point_b)
+        dist_ac = getDist(point_a, point_c)
+        dist_bc = getDist(point_b, point_c)
+        if dist_ab > max_length:
+            max_length = dist_ab
+        if dist_ac > max_length:
+            max_length = dist_ac
+        if dist_bc > max_length:
+            max_length = dist_bc
+    return max_length
 
 def getBorder(planes, planeSegmentation, points, faces):
     '''
@@ -69,10 +106,10 @@ def getBorder(planes, planeSegmentation, points, faces):
     parameter: plane_segmentation, points, faces
     return: border points, border line parameter
     '''
+    max_edge_dist = getMaxEdgeLength(points, faces)
     lines = []
     useful_line_indexs = []
-    lines_point = []
-    lines_result = []
+    borders = []
     for i in range(planes ** 2):
         lines.append(set())
 
@@ -100,6 +137,7 @@ def getBorder(planes, planeSegmentation, points, faces):
     #get all center points
     for i in range(len(lines)):
         if len(lines[i]) > 0:
+            plane_a, plane_b = getPlaneIndex(i, planes)
             useful_line_indexs.append(getPlaneIndex(i, planes))
             new_point_list = []
             for index_a, index_b in lines[i]:
@@ -108,21 +146,24 @@ def getBorder(planes, planeSegmentation, points, faces):
                 point_middle = (point_a + point_b) / 2
                 new_point_list.append(point_middle)
             new_point_list = np.array(new_point_list)
-            lines_point.append(new_point_list)
+            new_point_dict = {"plane_a" : plane_a, "plane_b" : plane_b, "points" : new_point_list}
+            borders.append(new_point_dict)
 
-    lines_point = np.array(lines_point)
-    for points in lines_point:
-        min_tree = getMinTree(points)
+    #lines_point = np.array(lines_point)
+    for i in range(len(borders)):
+        points = borders[i]["points"]
+        min_trees = getMinTree(points, max_edge_dist)
         edge_list = []
-        for i in range(len(min_tree) - 1):
-            edge_list.append((min_tree[i], min_tree[i + 1]))
-        lines_result.append(edge_list)
+        for tree in min_trees:
+            for j in range(len(tree) - 1):
+                edge_list.append((tree[j], tree[j + 1]))
+        borders[i]['edges'] = edge_list
     
     all_new_points = []
     all_new_edges = []
-    for i in range(len(lines_point)):
-        points = lines_point[i]
-        edges = lines_result[i]
+    for i in range(len(borders)):
+        points = borders[i]['points']
+        edges = borders[i]['edges']
         current_point_num_base = len(all_new_points)
         for point in points:
             all_new_points.append(point)
