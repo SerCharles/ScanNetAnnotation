@@ -7,6 +7,7 @@ from plyfile import PlyData, PlyElement
 import json
 import glob
 from math import *
+from extract_point import *
 
 def getPlaneIndex(lineIndex, planes):
     return lineIndex // planes, lineIndex % planes
@@ -149,21 +150,36 @@ def getBorder(planes, planeSegmentation, points, faces):
             new_point_dict = {"plane_a" : plane_a, "plane_b" : plane_b, "points" : new_point_list}
             borders.append(new_point_dict)
 
-    #lines_point = np.array(lines_point)
+    #use min_tree to get the lines
     for i in range(len(borders)):
         points = borders[i]["points"]
         min_trees = getMinTree(points, max_edge_dist)
         edge_list = []
+        crucial_point_indexs_real = []
         for tree in min_trees:
+            #get edges
             for j in range(len(tree) - 1):
                 edge_list.append((tree[j], tree[j + 1]))
+
+            #get crucial points
+            min_tree_points = []
+            length_tree = len(tree)
+            for j in range(length_tree):
+                min_tree_points.append(points[tree[j]])
+            crucial_point_indexs = douglasPeucker(min_tree_points, 0, length_tree - 1, max_edge_dist / 10)
+            for index in crucial_point_indexs:
+                crucial_point_indexs_real.append(tree[index])
+
         borders[i]['edges'] = edge_list
+        borders[i]['crucial_points'] = crucial_point_indexs_real
     
     all_new_points = []
     all_new_edges = []
+    all_crucial_points = []
     for i in range(len(borders)):
         points = borders[i]['points']
         edges = borders[i]['edges']
+        crucial_points = borders[i]['crucial_points']
         current_point_num_base = len(all_new_points)
         for point in points:
             all_new_points.append(point)
@@ -172,8 +188,9 @@ def getBorder(planes, planeSegmentation, points, faces):
             new_a = a + current_point_num_base
             new_b = b + current_point_num_base
             all_new_edges.append((new_a, new_b))
-
-    return all_new_points, all_new_edges
+        for index in crucial_points:
+            all_crucial_points.append(index + current_point_num_base)
+    return all_new_points, all_new_edges, all_crucial_points
 
         
 

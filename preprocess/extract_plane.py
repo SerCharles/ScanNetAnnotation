@@ -775,7 +775,7 @@ def readMesh(scene_id):
     planes *= (planesD ** 2)
     
     #求任意两个平面的边界
-    borderPoints, borderLines = getBorder(len(planePointIndices), planeSegmentation, points, faces)
+    borderPoints, borderLines, crucialPoints = getBorder(len(planePointIndices), planeSegmentation, points, faces)
 
 
 
