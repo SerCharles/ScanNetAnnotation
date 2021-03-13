@@ -18,7 +18,10 @@ def getLineIndex(planeIndexA, planeIndexB, planes):
     return mini * planes + maxi
 
 def getDist(a, b):
-    return sqrt(np.sum((a - b) ** 2, axis = 0))
+    dx = a[0] - b[0]
+    dy = a[1] - b[1]
+    dz = a[2] - b[2]
+    return sqrt(dx ** 2 + dy ** 2 + dz ** 2)
 
 def getMinTree(points, threshold):
     '''
@@ -166,7 +169,7 @@ def getBorder(planes, planeSegmentation, points, faces):
             length_tree = len(tree)
             for j in range(length_tree):
                 min_tree_points.append(points[tree[j]])
-            crucial_point_indexs = douglasPeucker(min_tree_points, 0, length_tree - 1, max_edge_dist / 10)
+            crucial_point_indexs = douglasPeucker(min_tree_points, 0, length_tree - 1, max_edge_dist / 2)
             for index in crucial_point_indexs:
                 crucial_point_indexs_real.append(tree[index])
 

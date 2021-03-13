@@ -146,7 +146,7 @@ def writePointCloudFace(filename, points, faces):
         pass
     return
 
-def writeMeshWithLines(filename, points, faces, new_points, new_lines):
+def writeMeshWithLines(filename, points, faces, new_points, new_lines, crucial_points):
     with open(filename, 'w') as f:
         header = "ply\n" + \
                 "format ascii 1.0\n" + \
@@ -180,13 +180,20 @@ def writeMeshWithLines(filename, points, faces, new_points, new_lines):
                 continue
             f.write('\n')
             continue
-        for point in new_points:
+        for i in range(len(new_points)):
+            point = new_points[i]
+            real_index = i + num_original_points
             for value in point:
                 f.write(str(value) + ' ')
                 continue
-            for i in range(3):
-                f.write(str(0) + ' ')
-                continue
+            if i in crucial_points:
+                for j in range(3):
+                    f.write(str(255) + ' ')
+                    continue
+            else:
+                for j in range(3):
+                    f.write(str(0) + ' ')
+                    continue
             f.write('\n')
             continue   
         
@@ -802,7 +809,7 @@ def readMesh(scene_id):
 
 
     writeMeshWithLines(os.path.join(annotationFolder, 'planes_with_line.ply'), np.concatenate([points, colors], axis=-1), faces, \
-        borderPoints, borderLines)
+        borderPoints, borderLines, crucialPoints)
     return
 
   

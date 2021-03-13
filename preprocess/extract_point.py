@@ -42,8 +42,11 @@ def douglasPeucker(point_list, start_id, end_id, threshold):
         #Recursive call
         rec_results1 = douglasPeucker(point_list, start_id, max_index, threshold)
         rec_results2 = douglasPeucker(point_list, max_index, end_id, threshold)
-        result_list += rec_results1
+        result_list += rec_results1[:-1]
         result_list += rec_results2
     else:
-        return range(start_id, end_id + 1)
+        if start_id < end_id:
+            return [start_id, end_id]
+        elif start_id == end_id:
+            return [start_id]
     return result_list
