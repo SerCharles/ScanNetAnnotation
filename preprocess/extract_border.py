@@ -29,7 +29,7 @@ def getMinTree(points, threshold):
     parameter: points, threshold that the line will be splited
     return: the tree
     '''
-    n = points.shape[0]
+    n = len(points)
     edges = np.zeros((n, n))
     visit = [False] * n
     v_new = []
@@ -111,11 +111,11 @@ def getBorder(planes, planeSegmentation, points, faces):
     return: border points, border line parameter
     '''
     max_edge_dist = getMaxEdgeLength(points, faces)
-    lines = []
+    lines_bordered = []
+    meshes_bordered = []
     useful_line_indexs = []
-    borders = []
     for i in range(planes ** 2):
-        lines.append(set())
+        lines_bordered.append(set())
 
     #get the points of all borders
     for faceIndex in range(faces.shape[0]):
@@ -123,76 +123,118 @@ def getBorder(planes, planeSegmentation, points, faces):
         a = face[0]
         b = face[1]
         c = face[2]
-        if planeSegmentation[a] != planeSegmentation[b]:
-            lineIndex = getLineIndex(planeSegmentation[a], planeSegmentation[b], planes)
+
+        #first consider that the mesh is divided by three different kinds
+        type_a = planeSegmentation[a]
+        type_b = planeSegmentation[b]
+        type_c = planeSegmentation[c]
+
+        
+        if type_a != type_b and type_a != type_c and type_b != type_c:
+            meshes_bordered.append((a, b, c))
+            continue
+
+        
+        if type_a != type_b:
+            lineIndex = getLineIndex(type_a, type_b, planes)
             new_tuple = (min(a, b), max(a, b))
-            lines[lineIndex].add(new_tuple)
+            lines_bordered[lineIndex].add(new_tuple)
 
-        if planeSegmentation[a] != planeSegmentation[c]:
-            lineIndex = getLineIndex(planeSegmentation[a], planeSegmentation[c], planes)
+        if type_a != type_c:
+            lineIndex = getLineIndex(type_a, type_c, planes)
             new_tuple = (min(a, c), max(a, c))
-            lines[lineIndex].add(new_tuple)
+            lines_bordered[lineIndex].add(new_tuple)
 
-        if planeSegmentation[b] != planeSegmentation[c]:
-            lineIndex = getLineIndex(planeSegmentation[b], planeSegmentation[c], planes)
+        if type_b != type_c:
+            lineIndex = getLineIndex(type_b, type_c, planes)
             new_tuple = (min(b, c), max(b, c))
-            lines[lineIndex].add(new_tuple)
+            lines_bordered[lineIndex].add(new_tuple)
 
-    #get all center points
-    for i in range(len(lines)):
-        if len(lines[i]) > 0:
+
+    all_new_points = []
+    new_point_border_num = []
+    all_new_edges = []
+    all_crucial_points = []
+    #get all points
+    for i in range(len(lines_bordered)):
+        if len(lines_bordered[i]) > 0:
             plane_a, plane_b = getPlaneIndex(i, planes)
             useful_line_indexs.append(getPlaneIndex(i, planes))
             new_point_list = []
-            for index_a, index_b in lines[i]:
+            for index_a, index_b in lines_bordered[i]:
                 point_a = points[index_a]
                 point_b = points[index_b]
                 point_middle = (point_a + point_b) / 2
-                new_point_list.append(point_middle)
-            new_point_list = np.array(new_point_list)
-            new_point_dict = {"plane_a" : plane_a, "plane_b" : plane_b, "points" : new_point_list}
-            borders.append(new_point_dict)
+                all_new_points.append(point_middle)
+                new_point_border_num.append([i])
+
+    for a, b, c in meshes_bordered:
+        point_a = points[a]
+        point_b = points[b]
+        point_c = points[c]
+        type_a = planeSegmentation[a]
+        type_b = planeSegmentation[b]
+        type_c = planeSegmentation[c]
+        point_middle = (point_a + point_b + point_c) / 3
+        all_new_points.append(point_middle)
+        new_point_border_num.append([getLineIndex(type_a, type_b, planes), \
+            getLineIndex(type_a, type_c, planes), getLineIndex(type_b, type_c, planes)])
+    
+    border_index = [-1] * (planes ** 2)
+    borders = []
+    for i in range(len(all_new_points)):
+        for j in new_point_border_num[i]:
+            if border_index[j] < 0:
+                border_index[j] = len(borders)
+                plane_a, plane_b = getPlaneIndex(j, planes)
+                new_dict = {'plane_a': plane_a, 'plane_b': plane_b, 'points': []}
+                borders.append(new_dict)
+            place = border_index[j]
+            borders[place]['points'].append(i)
 
     #use min_tree to get the lines
     for i in range(len(borders)):
-        points = borders[i]["points"]
-        min_trees = getMinTree(points, max_edge_dist)
+        point_indexs = borders[i]["points"]
+        current_points = []
+        for index in point_indexs:
+            current_points.append(all_new_points[index])
+        min_trees = getMinTree(current_points, max_edge_dist)
         edge_list = []
         crucial_point_indexs_real = []
         for tree in min_trees:
             #get edges
+            if len(tree) < 5:
+                continue
+
             for j in range(len(tree) - 1):
-                edge_list.append((tree[j], tree[j + 1]))
+                edge_list.append((point_indexs[tree[j]], point_indexs[tree[j + 1]]))
 
             #get crucial points
             min_tree_points = []
             length_tree = len(tree)
             for j in range(length_tree):
-                min_tree_points.append(points[tree[j]])
-            crucial_point_indexs = douglasPeucker(min_tree_points, 0, length_tree - 1, max_edge_dist / 2)
+                min_tree_points.append(points[point_indexs[tree[j]]])
+            crucial_point_indexs = douglasPeucker(min_tree_points, 0, length_tree - 1, 3 * max_edge_dist)
+            size_crucial_points = len(crucial_point_indexs)
             for index in crucial_point_indexs:
-                crucial_point_indexs_real.append(tree[index])
+                crucial_point_indexs_real.append(point_indexs[tree[index]])
+
 
         borders[i]['edges'] = edge_list
         borders[i]['crucial_points'] = crucial_point_indexs_real
     
-    all_new_points = []
-    all_new_edges = []
-    all_crucial_points = []
+
     for i in range(len(borders)):
-        points = borders[i]['points']
         edges = borders[i]['edges']
         crucial_points = borders[i]['crucial_points']
-        current_point_num_base = len(all_new_points)
-        for point in points:
-            all_new_points.append(point)
         for edge in edges:
             a, b = edge
-            new_a = a + current_point_num_base
-            new_b = b + current_point_num_base
-            all_new_edges.append((new_a, new_b))
+            all_new_edges.append((a, b))
         for index in crucial_points:
-            all_crucial_points.append(index + current_point_num_base)
+            if not index in all_crucial_points:
+                all_crucial_points.append(index)
+            else: 
+                kebab = 0
     return all_new_points, all_new_edges, all_crucial_points
 
         
