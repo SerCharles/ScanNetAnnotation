@@ -104,6 +104,45 @@ def getMaxEdgeLength(points, faces):
             max_length = dist_bc
     return max_length
 
+def simplifyBorder(all_points, borders):
+    '''
+    description:simplfy the borders, leave only crucial points and edges
+    parameter: all points, original borders
+    return: new border, new points and edges
+    '''
+    all_crucial_points = []
+    all_crucial_points_index = []
+    all_crucial_edges = []
+    point_index = [-1] * len(all_points)
+    current_crucial_points = 0
+    for i in range(len(borders)):
+        edges = borders[i]['edges']
+        crucial_points = borders[i]['crucial_points']
+        crucial_edges = borders[i]['crucial_edges']
+        all_crucial_points_index += crucial_points
+    for index in all_crucial_points_index:
+        if point_index[index] < 0:
+            all_crucial_points.append(all_points[index])
+            point_index[index] = current_crucial_points
+            current_crucial_points += 1
+    
+    for i in range(len(borders)):
+        new_points = []
+        new_edges = []
+        crucial_points = borders[i]['crucial_points']
+        crucial_edges = borders[i]['crucial_edges']
+        for index in crucial_points:
+            new_points.append(point_index[index])
+        for edge in crucial_edges:
+            a, b = edge 
+            new_edges.append((point_index[a], point_index[b]))
+        borders[i]['points'] = new_points
+        borders[i]['edges'] = new_edges
+        del borders[i]['crucial_points']
+        del borders[i]['crucial_edges']
+        all_crucial_edges += new_edges
+    return borders, all_crucial_points, all_crucial_edges
+
 def getBorder(planes, planeSegmentation, points, faces):
     '''
     description: After get the points of all segmented planes, get the border lines(both points and geometry approximation)
@@ -114,6 +153,7 @@ def getBorder(planes, planeSegmentation, points, faces):
     lines_bordered = []
     meshes_bordered = []
     useful_line_indexs = []
+    all_crucial_edges = []
     for i in range(planes ** 2):
         lines_bordered.append(set())
 
@@ -201,6 +241,7 @@ def getBorder(planes, planeSegmentation, points, faces):
         min_trees = getMinTree(current_points, max_edge_dist)
         edge_list = []
         crucial_point_indexs_real = []
+        crucial_point_edges = []
         for tree in min_trees:
             #get edges
             if len(tree) < 5:
@@ -214,28 +255,42 @@ def getBorder(planes, planeSegmentation, points, faces):
             length_tree = len(tree)
             for j in range(length_tree):
                 min_tree_points.append(points[point_indexs[tree[j]]])
-            crucial_point_indexs = douglasPeucker(min_tree_points, 0, length_tree - 1, 3 * max_edge_dist)
+            crucial_point_indexs = douglasPeucker(min_tree_points, 0, length_tree - 1, max_edge_dist * 1.2)
             size_crucial_points = len(crucial_point_indexs)
-            for index in crucial_point_indexs:
-                crucial_point_indexs_real.append(point_indexs[tree[index]])
+            for j in range(len(crucial_point_indexs)):
+                index = crucial_point_indexs[j]
+                the_point_index = point_indexs[tree[index]]
+                crucial_point_indexs_real.append(the_point_index)
+
+                if j != len(crucial_point_indexs) - 1:
+                    next_index = crucial_point_indexs[j + 1]
+                    the_next_point_index = point_indexs[tree[next_index]]
+                    crucial_point_edges.append((the_point_index, the_next_point_index))
 
 
         borders[i]['edges'] = edge_list
         borders[i]['crucial_points'] = crucial_point_indexs_real
+        borders[i]['crucial_edges'] = crucial_point_edges
     
 
     for i in range(len(borders)):
         edges = borders[i]['edges']
         crucial_points = borders[i]['crucial_points']
+        crucial_edges = borders[i]['crucial_edges']
         for edge in edges:
             a, b = edge
             all_new_edges.append((a, b))
         for index in crucial_points:
             if not index in all_crucial_points:
                 all_crucial_points.append(index)
-            else: 
-                kebab = 0
-    return all_new_points, all_new_edges, all_crucial_points
+        for edge in crucial_edges:
+            a, b = edge 
+            all_crucial_edges.append((a, b))
+    print(len(all_crucial_points))
+
+    borders, new_points, new_edges = simplifyBorder(all_new_points, borders)
+
+    return all_new_points, new_points, new_edges
 
         
 
