@@ -391,7 +391,7 @@ def mergePlanes(points, planes, planePointIndices, planeSegments, segmentNeighbo
 
 def readMesh(scene_id):
     print(scene_id)
-
+    debugIndex = -1
     filename = os.path.join(ROOT_FOLDER, scene_id, scene_id + '_selected.aggregation.json')
     data = json.load(open(filename, 'r'))
     aggregation = np.array(data['segGroups'])
@@ -531,8 +531,6 @@ def readMesh(scene_id):
     planeGroups = []
     print('num groups', len(groupSegments))
 
-    debug = False
-    debugIndex = -1
     
     for groupIndex, group in enumerate(groupSegments):
         if debugIndex != -1 and groupIndex != debugIndex:
@@ -717,32 +715,12 @@ def readMesh(scene_id):
     colorMap = ColorPalette(segmentation.max() + 2).getColorMap()
     colorMap[-1] = 0
     colorMap[-2] = 255
-    if debug:
-        annotationFolder = os.path.join(ROOT_FOLDER, scene_id, 'test', 'PlaneRCNN')
-    else:
-        annotationFolder = os.path.join(ROOT_FOLDER, scene_id, 'annotation', 'PlaneRCNN')
-        pass
 
+    annotationFolder = os.path.join(ROOT_FOLDER, scene_id, 'annotation')
     if not os.path.exists(annotationFolder):
         os.mkdir(annotationFolder)
     print('output:', annotationFolder)
 
-
-    if debug:
-        colors = colorMap[segmentation]
-        writePointCloudFace(os.path.join(annotationFolder, 'segments.ply'), np.concatenate([points, colors], axis=-1), faces)
-
-        groupedSegmentation = np.full(segmentation.shape, fill_value=-1)
-        for segmentIndex in range(len(aggregation)):
-            indices = aggregation[segmentIndex]['segments']
-            for index in indices:
-                groupedSegmentation[segmentation == index] = segmentIndex
-                continue
-            continue
-        groupedSegmentation = groupedSegmentation.astype(np.int32)
-        colors = colorMap[groupedSegmentation]
-        writePointCloudFace(os.path.join(annotationFolder, 'groups.ply'), np.concatenate([points, colors], axis=-1), faces)
-        pass
 
     planes = []
     planePointIndices = []
@@ -819,29 +797,6 @@ def readMesh(scene_id):
         continue
 
 
-    if debug:
-        groupSegmentation = np.full(segmentation.shape, fill_value=-1, dtype=np.int32)        
-        structureSegmentation = np.full(segmentation.shape, fill_value=-1, dtype=np.int32)
-        typeSegmentation = np.full(segmentation.shape, fill_value=-1, dtype=np.int32)
-        for planeIndex, planePoints in enumerate(planePointIndices):
-            if len(planeInfo[planeIndex]) > 1:
-                structureSegmentation[planePoints] = planeInfo[planeIndex][1][0]
-                typeSegmentation[planePoints] = np.maximum(typeSegmentation[planePoints], planeInfo[planeIndex][1][1] - 2)
-                pass
-            groupSegmentation[planePoints] = planeInfo[planeIndex][0][0]
-            continue
-
-        colors = colorMap[groupSegmentation]    
-        writePointCloudFace(os.path.join(annotationFolder, 'group.ply'), np.concatenate([points, colors], axis=-1), faces)
-
-        colors = colorMap[structureSegmentation]    
-        writePointCloudFace(os.path.join(annotationFolder, 'structure.ply'), np.concatenate([points, colors], axis=-1), faces)
-
-        colors = colorMap[typeSegmentation]    
-        writePointCloudFace(os.path.join(annotationFolder, 'type.ply'), np.concatenate([points, colors], axis=-1), faces)
-        pass
-
-
     planes = np.array(planes)
     print('number of planes: ', planes.shape[0])
     planesD = 1.0 / np.maximum(np.linalg.norm(planes, axis=-1, keepdims=True), 1e-4)
@@ -850,6 +805,7 @@ def readMesh(scene_id):
     #求任意两个平面的边界
     borderInfo, borderPoints, borderLines = getBorder(len(planePointIndices), planeSegmentation, points, faces)
 
+    
 
 
     removeIndices = []
@@ -865,17 +821,27 @@ def readMesh(scene_id):
     faces = np.delete(faces, removeIndices)
     colors = colorMap[planeSegmentation]    
     writePointCloudFace(os.path.join(annotationFolder, 'planes.ply'), np.concatenate([points, colors], axis=-1), faces)
-
-    if debug:
-        print(len(planes), len(planeInfo))
-        pass
     
     np.save(os.path.join(annotationFolder, 'planes.npy'), planes)
     np.save(os.path.join(annotationFolder, 'plane_info.npy'), planeInfo)      
 
+    num_points = len(points)
+    for i in range(len(borderInfo)):
+        for j in range(len(borderInfo[i]['points'])):
+            borderInfo[i]['points'][j] += num_points
+        for j in range(len(borderInfo[i]['edges'])):
+            borderInfo[i]['edges'][j][0] += num_points
+            borderInfo[i]['edges'][j][1] += num_points
+
+    with open(os.path.join(annotationFolder, 'borders.json'), 'w') as border_f:
+        json.dump(borderInfo, border_f, indent = 6)
+
 
     writeMeshWithLines(os.path.join(annotationFolder, 'planes_with_line.ply'), np.concatenate([points, colors], axis=-1), faces, \
         borderPoints, borderLines)
+    
+
+
     return
 
   

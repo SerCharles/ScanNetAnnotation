@@ -6,12 +6,13 @@ from plyfile import *
 type_use = ['window', 'kitchen counter', 'cabinet', \
     'kitchen cabinets', 'floor', 'wall', 'door', 'ceiling', 'doorframe', 'shelf']
 
-'''
-描述：选取所需的模型，并且更新各种数据文件
-参数：根目录，场景id
-返回：无
-'''
+
 def select_shape(ROOT_FOLDER, scene_id):
+    '''
+    描述：选取所需的模型，并且更新各种数据文件
+    参数：根目录，场景id
+    返回：无
+    '''
     ply_name = os.path.join(ROOT_FOLDER, scene_id, scene_id + '_vh_clean_2.labels.ply')
     instance_descriptor_name = os.path.join(ROOT_FOLDER, scene_id, scene_id + '.aggregation.json') 
     vertex_info_name = os.path.join(ROOT_FOLDER, scene_id, scene_id + '_vh_clean_2.0.010000.segs.json')
@@ -111,5 +112,5 @@ def select_shape(ROOT_FOLDER, scene_id):
     instance_info['segGroups'] = new_instances
     new_json_instance_name = os.path.join(ROOT_FOLDER, scene_id, scene_id + '_selected.aggregation.json') 
     with open(new_json_instance_name, "w") as f:
-        json.dump(instance_info, f)
+        json.dump(instance_info, f, indent = 6)
     

@@ -129,15 +129,17 @@ def simplifyBorder(all_points, borders):
     for i in range(len(borders)):
         new_points = []
         new_edges = []
+        new_edges_out = []
         crucial_points = borders[i]['crucial_points']
         crucial_edges = borders[i]['crucial_edges']
         for index in crucial_points:
-            new_points.append(point_index[index])
+            new_points.append(int(point_index[index]))
         for edge in crucial_edges:
-            a, b = edge 
-            new_edges.append((point_index[a], point_index[b]))
+            a, b = edge
+            new_edges.append((point_index[a], point_index[b])) 
+            new_edges_out.append([int(point_index[a]), int(point_index[b])])
         borders[i]['points'] = new_points
-        borders[i]['edges'] = new_edges
+        borders[i]['edges'] = new_edges_out
         del borders[i]['crucial_points']
         del borders[i]['crucial_edges']
         all_crucial_edges += new_edges
@@ -227,7 +229,7 @@ def getBorder(planes, planeSegmentation, points, faces):
             if border_index[j] < 0:
                 border_index[j] = len(borders)
                 plane_a, plane_b = getPlaneIndex(j, planes)
-                new_dict = {'plane_a': plane_a, 'plane_b': plane_b, 'points': []}
+                new_dict = {'plane_a': int(plane_a), 'plane_b': int(plane_b), 'points': []}
                 borders.append(new_dict)
             place = border_index[j]
             borders[place]['points'].append(i)
@@ -290,7 +292,7 @@ def getBorder(planes, planeSegmentation, points, faces):
 
     borders, new_points, new_edges = simplifyBorder(all_new_points, borders)
 
-    return all_new_points, new_points, new_edges
+    return borders, new_points, new_edges
 
         
 
