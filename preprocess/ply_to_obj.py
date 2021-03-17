@@ -9,12 +9,15 @@ def ply_to_obj(ROOT_FOLDER, scene_id):
     parameters: root folder of scannet, the scene id
     return: empty, write the obj file
     '''
-    ply_name = os.path.join(ROOT_FOLDER, scene_id, 'annotation', 'planes_with_line.ply')
-    obj_name = os.path.join(ROOT_FOLDER, scene_id, 'annotation', 'planes_with_line.obj')
+    ply_name = os.path.join(ROOT_FOLDER, scene_id, 'annotation', 'planes.ply')
+    obj_name = os.path.join(ROOT_FOLDER, scene_id, 'annotation', 'planes.obj')
     plydata = PlyData.read(ply_name)
     vertexs = plydata['vertex']
     faces = plydata['face']
-    edges = plydata['edge']
+    try:
+        edges = plydata['edge']
+    except: 
+        edges = []
     file_out = open(obj_name, 'w')
     for vertex in vertexs:
         x, y, z, r, g, b = vertex
