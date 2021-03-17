@@ -853,6 +853,7 @@ if __name__=='__main__':
         print('=================')
         select_shape(ROOT_FOLDER, scene_id)
         readMesh(scene_id)
+        
 
     # for index, scene_id in enumerate(sorted(scene_ids)):
     #     if scene_id[:5] != 'scene':
