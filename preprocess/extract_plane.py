@@ -230,9 +230,6 @@ def writeMeshWithLines(filename, points, faces, new_points, new_lines):
                 str(len(new_lines)) + '\n' + \
                 "property int32 vertex1\n" + \
                 "property int32 vertex2\n" + \
-                "property uchar red\n" + \
-                "property uchar green\n" + \
-                "property uchar blue\n" + \
                 "end_header\n"
 
 
@@ -255,7 +252,7 @@ def writeMeshWithLines(filename, points, faces, new_points, new_lines):
                 f.write(str(value) + ' ')
                 continue
             for j in range(3):
-                f.write(str(0) + ' ')
+                f.write(str(255) + ' ')
                 continue
             f.write('\n')
             continue   
@@ -269,9 +266,6 @@ def writeMeshWithLines(filename, points, faces, new_points, new_lines):
             a += num_original_points
             b += num_original_points
             f.write(str(a) + ' ' + str(b) + ' ')  
-            for i in range(3):
-                f.write(str(0) + ' ')
-                continue
             f.write('\n')
         
         f.close()
