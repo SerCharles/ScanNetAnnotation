@@ -6,6 +6,8 @@
 *.user
 *.userosscache
 *.sln.docstates
+*.txt
+*.ply
 
 PA1_Cliping/bin
 PA2_Scene/bin
