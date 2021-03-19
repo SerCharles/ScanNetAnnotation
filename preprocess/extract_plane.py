@@ -13,6 +13,7 @@ import json
 import glob
 from instance_selection import *
 from extract_border import *
+from pose_loader import *
 
 ROOT_FOLDER = "E:\\dataset\\scannet\\scans"
 #ROOT_FOLDER = "/orion/group/ScanNet/scannet/data/scans_train/"
@@ -847,7 +848,7 @@ if __name__=='__main__':
         print('=================')
         select_shape(ROOT_FOLDER, scene_id)
         readMesh(scene_id)
-        
+        getGLParameters(ROOT_FOLDER, scene_id)
 
     # for index, scene_id in enumerate(sorted(scene_ids)):
     #     if scene_id[:5] != 'scene':
