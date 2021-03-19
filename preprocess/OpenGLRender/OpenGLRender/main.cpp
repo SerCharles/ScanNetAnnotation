@@ -1,4 +1,4 @@
-#include <GL/glut.h>
+#include <freeglut/glut.h>
 #include <iostream>
 #include <math.h>
 #include <windows.h>
@@ -44,7 +44,8 @@ void InitWindow()
 void InitCamera()
 {
 	//设置初始相机位置
-	TheCamera.Init(10.0f, 10.0f);
+	string filename = "poses.txt";
+	TheCamera.Init(filename);
 }
 
 
@@ -62,9 +63,11 @@ void InitScene()
 void SetCamera()
 {
 	glLoadIdentity();
-	Point camera_place = TheCamera.CurrentPlace;//这就是视点的坐标  
-	Point camera_center = TheCamera.LookCenter;//这是视点中心坐标
-	gluLookAt(camera_place.x, camera_place.y, camera_place.z, camera_center.x, camera_center.y, camera_center.z, 0, 1, 0); //从视点看远点,y轴方向(0,1,0)是上方向  
+	Point eye = TheCamera.Eye;
+	Point center = TheCamera.Center;
+	Point up = TheCamera.Up;
+
+	gluLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, up.x, up.y, up.z);
 }
 
 
@@ -101,21 +104,6 @@ void OnTimer(int value)
 }
 
 
-//交互函数集合
-//处理鼠标点击 
-void OnMouseClick(int button, int state, int x, int y)
-{
-	if (state == GLUT_DOWN)
-	{
-		TheCamera.MouseDown(x, y);
-	}
-}
-
-//处理鼠标拖动  
-void OnMouseMove(int x, int y)
-{
-	TheCamera.MouseMove(x, y);
-}
 
 //处理键盘点击（WASD）
 void OnKeyClick(unsigned char key, int x, int y)
@@ -185,8 +173,6 @@ int main(int argc, char**argv)
 	glutReshapeFunc(Reshape); //绑定reshape函数
 	glutDisplayFunc(DrawScene); //绑定显示函数
 	glutTimerFunc(20, OnTimer, 1);  //启动计时器
-	glutMouseFunc(OnMouseClick); //绑定鼠标点击函数
-	glutMotionFunc(OnMouseMove); //绑定鼠标移动函数
 	glutKeyboardFunc(OnKeyClick);//绑定键盘点击函数
 	glutSpecialFunc(OnSpecialKeyClick);//绑定特殊键盘点击函数
 	glutMainLoop();

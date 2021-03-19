@@ -6,7 +6,7 @@
 
 
 #include<math.h>
-#include<GL/glut.h>
+#include<freeglut/glut.h>
 #include<vector>
 using namespace std;
 

@@ -7,7 +7,7 @@
 #include<iostream>
 #include<cstdlib>
 #include<fstream>
-#include<GL/glut.h>
+#include<freeglut/glut.h>
 #include<string>
 #include<vector>
 #include<cmath>
