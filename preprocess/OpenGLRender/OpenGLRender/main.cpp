@@ -3,6 +3,7 @@
 #include <math.h>
 #include <windows.h>
 #include <time.h>
+#include <opencv2/opencv.hpp>
 #include "Geometry.hpp"
 #include "Camera.hpp"
 #include "MeshModel.hpp"
@@ -16,7 +17,46 @@ using namespace std;
 //全局常量
 const int WindowSizeX = 640, WindowSizeY = 480, WindowPlaceX = 100, WindowPlaceY = 100;
 const char WindowName[] = "MyScene";
-float GlobalRefractionRate = 1;
+string BaseDir = "E:\\dataset\\scannet\\scans\\scene0000_00\\annotation\\pictures";
+
+void SavePicture(int id)
+{
+	string save_place = BaseDir + "\\" + to_string(id) + ".jpg";
+	//save image
+	GLubyte* pPixelData;
+	pPixelData = (GLubyte*)malloc(WindowSizeX * WindowSizeY * 4);//分配内存
+	if (pPixelData == 0) return;
+	glReadBuffer(GL_FRONT);//保存窗口渲染的结果
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);//解压窗口数据结构
+	glReadPixels(0, 0, WindowSizeX, WindowSizeY, GL_RGBA, GL_UNSIGNED_BYTE, pPixelData);//存储像素数据
+
+	cv::Mat img;
+	std::vector<cv::Mat> imgPlanes;
+	img.create(WindowSizeY, WindowSizeX, CV_8UC3);//确定图片通道和尺寸
+	cv::split(img, imgPlanes);//将图像按照通道数拆分，三个单通道序列
+
+	for (int i = 0; i < WindowSizeY; i++) {
+		unsigned char* plane0Ptr = imgPlanes[0].ptr<unsigned char>(i);//B
+		unsigned char* plane1Ptr = imgPlanes[1].ptr<unsigned char>(i);//G
+		unsigned char* plane2Ptr = imgPlanes[2].ptr<unsigned char>(i);//R
+		//opencv里面以BGR存储的，而Mac上opengl是RGBA，所以需要改变顺序保存
+		for (int j = 0; j < WindowSizeX; j++) {
+			int k = 4 * (i * WindowSizeX + j);//RGBA数据结构，不需要A，跳过，所以步长乘以4
+			plane2Ptr[j] = pPixelData[k];//R
+			plane1Ptr[j] = pPixelData[k + 1];//G
+			plane0Ptr[j] = pPixelData[k + 2];//B
+		}
+	}
+	cv::merge(imgPlanes, img);//合并多通道图像
+	cv::flip(img, img, 0); // 反转图像，因为opengl和opencv的坐标系y轴是相反的
+	//cv::cvtColor(img, img, cv::COLOR_RGB2GRAY);//转换为灰度图
+	//cv::namedWindow("openglGrab");
+	//cv::imshow("openglGrab", img);
+	//cv::waitKey();
+	cv::imwrite(save_place, img);//保存图片
+
+}
+
 
 //光照，相机
 Camera TheCamera;
@@ -94,6 +134,9 @@ void DrawScene()
 	}
 	glFlush();	
 	glutSwapBuffers();
+	SavePicture(TheCamera.IDList[TheCamera.CurrentNum]);
+	TheCamera.CurrentNum = (TheCamera.CurrentNum + 1) % TheCamera.PoseNum;
+	TheCamera.ResetCurrentPlace();
 }
 
 //全局定时器
@@ -164,9 +207,9 @@ void Reshape(int w, int h)
 
 
 
+
 int main(int argc, char**argv)
 {
-
 	glutInit(&argc, argv);
 	InitWindow();             //初始化窗口
 	InitScene();              //初始化场景
