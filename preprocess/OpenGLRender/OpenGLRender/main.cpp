@@ -14,7 +14,7 @@ using namespace std;
 #define RAY_TRACE_ACCELERATE 4
 
 //全局常量
-const int WindowSizeX = 800, WindowSizeY = 600, WindowPlaceX = 100, WindowPlaceY = 100;
+const int WindowSizeX = 640, WindowSizeY = 480, WindowPlaceX = 100, WindowPlaceY = 100;
 const char WindowName[] = "MyScene";
 float GlobalRefractionRate = 1;
 

@@ -46,7 +46,8 @@ def leavePictures(picture_path, interval):
     picture_files = glob.glob(os.path.join(picture_path, '*.jpg'))
     picture_files.sort(key = functools.cmp_to_key(compareFilename))
     for i in range(len(picture_files)):
-        if i % interval != 0:
+        p_id = int(picture_files[i].split(os.sep)[-1][:-4])
+        if p_id % interval != 0:
             file_name = picture_files[i]
             os.remove(file_name)
 
@@ -66,6 +67,7 @@ def getGLParameters(ROOT_FOLDER, scene_id):
     f.write(str(len(poses)) + '\n')
     for ii in range(len(poses)):
         pose = poses[ii]
+        pose = np.linalg.inv(pose)
         pose_id = interval * ii
         x = np.zeros(3) 
         y = np.zeros(3) 
@@ -78,8 +80,8 @@ def getGLParameters(ROOT_FOLDER, scene_id):
             result_move[i] = pose[i][3]
         r = np.concatenate((x, y, z)).reshape((3, 3))
         center = - np.matmul(np.linalg.inv(r), result_move)
-        eye = center + z 
-        up = np.cross(z, x)
+        eye = center - z 
+        up = - np.cross(z, x)
         f.write(str(pose_id) + '\n')
         f.write(str(eye[0]) + ' ' + str(eye[1]) + ' ' + str(eye[2]) + '\n')
         f.write(str(center[0]) + ' ' + str(center[1]) + ' ' + str(center[2]) + '\n')
