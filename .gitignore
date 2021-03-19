@@ -8,7 +8,7 @@
 *.sln.docstates
 *.txt
 *.ply
-
+preprocess/OpenGLRender/OpenGLRender/poses.txt
 PA1_Cliping/bin
 PA2_Scene/bin
 PA3_RayTracing/src/enc_temp_folder
