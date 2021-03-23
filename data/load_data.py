@@ -35,9 +35,16 @@ with h5py.File(path, 'r') as f:
         the_point = np.array(the_point)
         the_model_face = the_model['face']
         the_model_params = the_model['params']
-        #TODO model
 
+        face_0 = f[the_model_face[0][0]][0][0]
+        face_1 = f[the_model_face[1][0]][0][0]
+        face_2 = f[the_model_face[2][0]][0][0]
+        param_0 = f[the_model_params[0][0]][0][0]
+        param_1 = f[the_model_params[1][0]][0][0]
+        param_2 = f[the_model_params[2][0]][0][0]
+        model_data.append([[face_0, face_1, face_2], [param_0, param_1, param_2]])
 
+        
         the_string = ''
         for item in depth_id: 
             the_string += chr(item[0])
