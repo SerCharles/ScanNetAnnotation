@@ -25,6 +25,8 @@ class MatterPortDataSet(Dataset):
         self.layout_seg_filenames = []
         self.points = []
         self.intrinsics = []
+        self.faces = []
+        self.params = []
         with h5py.File(self.mat_path, 'r') as f:
             data = f['data']
             depths = data['depth'][:]
@@ -51,13 +53,16 @@ class MatterPortDataSet(Dataset):
                 the_model_faces = the_model['face']
                 the_model_params = the_model['params']
 
-                self.faces = []
-                self.params = []
+
+                faces = []
+                params = []
                 for j in range(len(the_model_faces)):
                     face = f[the_model_faces[j][0]][0][0]
                     param = f[the_model_params[j][0]][0][0]
-                    self.faces.append(face) 
-                    self.params.append(param) 
+                    faces.append(face)  
+                    params.append(param)
+                self.faces.append(faces) 
+                self.params.append(params) 
                 
                 self.intrinsics.append(the_intrinsic)
                 self.points.append(the_point)
@@ -118,7 +123,7 @@ class MatterPortDataSet(Dataset):
         return: the data
         '''
         return self.depths[i], self.images[i], self.init_labels[i], self.layout_depths[i], self.layout_segs[i], \
-            self.faces[i], self.params, self.intrinsics[i], self.points[i]
+            self.faces[i], self.params[i], self.intrinsics[i], self.points[i]
  
     def __len__(self):
         '''
@@ -131,7 +136,7 @@ class MatterPortDataSet(Dataset):
 
 
 a = MatterPortDataSet('E:\\dataset\\geolayout', 'validation')
-print(a.__len())
+print(a.__len__())
 depth, image, init_label, layout_depth, layout_seg, face, param, intrinsic, point = a.__getitem__(10)
 print(depth)
 print(image)
