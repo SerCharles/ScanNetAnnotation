@@ -2,6 +2,7 @@ import h5py
 import numpy as np
 import os
 import torch
+import scipy.io as sio
 from torch.autograd import Variable
 from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
@@ -27,6 +28,14 @@ class MatterPortDataSet(Dataset):
         self.intrinsics = []
         self.faces = []
         self.params = []
+        self.norms = [] 
+        self.boundarys = [] 
+        self.radiuss = [] 
+
+
+
+
+
         with h5py.File(self.mat_path, 'r') as f:
             data = f['data']
             depths = data['depth'][:]
@@ -98,11 +107,17 @@ class MatterPortDataSet(Dataset):
         self.layout_depths = []
         self.layout_segs = []
         for i in range(self.length):
+            base_name = self.depth_filenames[i][:-4]
             depth_name = os.path.join(self.base_dir, self.type, 'depth', self.depth_filenames[i])
             image_name = os.path.join(self.base_dir, self.type, 'image', self.image_filenames[i])
             init_label_name = os.path.join(self.base_dir, self.type, 'init_label', self.init_label_filenames[i])
             layout_depth_name = os.path.join(self.base_dir, self.type, 'layout_depth', self.layout_depth_filenames[i])
             layout_seg_name = os.path.join(self.base_dir, self.type, 'layout_seg', self.layout_seg_filenames[i])
+            nx_name = os.path.join(self.base_dir, self.type, 'normal', base_name + '_nx.png')
+            ny_name = os.path.join(self.base_dir, self.type, 'normal', base_name + '_ny.png')
+            nz_name = os.path.join(self.base_dir, self.type, 'normal', base_name + '_nz.png')
+            boundary_name = os.path.join(self.base_dir, self.type, 'normal', base_name + '_boundary.png')
+            radius_name = os.path.join(self.base_dir, self.type, 'normal', base_name + '_radius.png')
 
             depth = io.imread(depth_name)
             image = io.imread(image_name)
@@ -110,11 +125,24 @@ class MatterPortDataSet(Dataset):
             layout_depth = io.imread(layout_depth_name)
             layout_seg = io.imread(layout_seg_name)
 
+            nx = io.imread(nx_name)
+            ny = io.imread(ny_name)
+            nz = io.imread(nz_name)
+            boundary = io.imread(boundary_name)   
+            radius = io.imread(radius_name)    
+            nx = nx.reshape((nx.shape[0], nx.shape[1], 1))
+            ny = ny.reshape((ny.shape[0], ny.shape[1], 1))
+            nz = nz.reshape((nz.shape[0], nz.shape[1], 1))
+            norm = np.concatenate((nx, ny, nz), axis = 2)
+            
             self.depths.append(depth)
             self.images.append(image)
             self.init_labels.append(init_label)
             self.layout_depths.append(layout_depth)
             self.layout_segs.append(layout_seg)
+            self.norms.append(norm)  
+            self.boundarys.append(boundary) 
+            self.radiuss.append(radius)  
  
     def __getitem__(self, i):
         '''
@@ -123,7 +151,7 @@ class MatterPortDataSet(Dataset):
         return: the data
         '''
         return self.depths[i], self.images[i], self.init_labels[i], self.layout_depths[i], self.layout_segs[i], \
-            self.faces[i], self.params[i], self.intrinsics[i], self.points[i]
+            self.faces[i], self.params[i], self.intrinsics[i], self.points[i], self.norms[i], self.boundarys[i], self.radiuss[i]
  
     def __len__(self):
         '''
@@ -136,14 +164,17 @@ class MatterPortDataSet(Dataset):
 
 
 a = MatterPortDataSet('E:\\dataset\\geolayout', 'validation')
-print(a.__len__())
-depth, image, init_label, layout_depth, layout_seg, face, param, intrinsic, point = a.__getitem__(10)
-print(depth)
-print(image)
-print(init_label)
-print(layout_depth)
-print(layout_seg)
-print(face)
-print(param)
-print(intrinsic)
-print(point)
+print('length:', a.__len__())
+depth, image, init_label, layout_depth, layout_seg, face, param, intrinsic, point, norm, boundary, radius = a.__getitem__(10)
+print('depth:', depth, depth.shape)
+print('image:', image, image.shape)
+print('init_label:', init_label, init_label.shape)
+print('layout_depth:', layout_depth, layout_depth.shape)
+print('layout_seg:', layout_seg, layout_seg.shape)
+print('face:', face, len(face))
+print('param:', param, len(param))
+print('intrinsic:', intrinsic, intrinsic.shape)
+print('point:', point, point.shape)
+print('norm:', norm, norm.shape)
+print('boundary:', boundary, boundary.shape)
+print('radius:', radius, radius.shape)
