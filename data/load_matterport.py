@@ -31,75 +31,84 @@ class MatterPortDataSet(Dataset):
         self.norms = [] 
         self.boundarys = [] 
         self.radiuss = [] 
-
-
-
-
+    
 
         with h5py.File(self.mat_path, 'r') as f:
             data = f['data']
-            depths = data['depth'][:]
+            
             images = data['image'][:]
-            init_labels = data['init_label'][:]
             intrinsics_matrixs = data['intrinsics_matrix'][:]
-            layout_depths = data['layout_depth'][:]
-            layout_segs = data['layout_seg'][:]
-            models = data['model'][:]
-            points = data['point'][:]
-            self.length = len(depths)
+            self.length = len(images)
+
+            if not the_type == 'testing':
+                depths = data['depth'][:]
+                images = data['image'][:]
+                init_labels = data['init_label'][:]
+                intrinsics_matrixs = data['intrinsics_matrix'][:]
+                layout_depths = data['layout_depth'][:]
+                layout_segs = data['layout_seg'][:]
+                models = data['model'][:]
+                points = data['point'][:]
+
+            
             for i in range(self.length):
-                depth_id = f[depths[i][0]]
                 image_id = f[images[i][0]]
-                init_label_id = f[init_labels[i][0]]
-                layout_depth_id = f[layout_depths[i][0]]
-                layout_seg_id = f[layout_segs[i][0]]
-                the_intrinsic = f[intrinsics_matrixs[i][0]]
-                the_model = f[models[i][0]]
-                the_point = f[points[i][0]]
-
-                the_intrinsic = np.array(the_intrinsic)
-                the_point = np.array(the_point)
-                the_model_faces = the_model['face']
-                the_model_params = the_model['params']
-
-
-                faces = []
-                params = []
-                for j in range(len(the_model_faces)):
-                    face = f[the_model_faces[j][0]][0][0]
-                    param = f[the_model_params[j][0]][0][0]
-                    faces.append(face)  
-                    params.append(param)
-                self.faces.append(faces) 
-                self.params.append(params) 
-                
-                self.intrinsics.append(the_intrinsic)
-                self.points.append(the_point)
-
-                the_string = ''
-                for item in depth_id: 
-                    the_string += chr(item[0])
-                self.depth_filenames.append(the_string)
-
                 the_string = ''
                 for item in image_id: 
                     the_string += chr(item[0])
                 self.image_filenames.append(the_string)
 
-                the_string = ''
-                for item in init_label_id: 
-                    the_string += chr(item[0])
-                self.init_label_filenames.append(the_string)
+                the_intrinsic = f[intrinsics_matrixs[i][0]]
+                the_intrinsic = np.array(the_intrinsic)
+                self.intrinsics.append(the_intrinsic)
 
-                the_string = ''
-                for item in layout_depth_id: 
-                    the_string += chr(item[0])
-                self.layout_depth_filenames.append(the_string)
 
-                the_string = ''
-                for item in layout_seg_id: 
-                    the_string += chr(item[0])
-                self.layout_seg_filenames.append(the_string)
+                if not the_type == 'testing':
+    
+                    depth_id = f[depths[i][0]]
+                    init_label_id = f[init_labels[i][0]]
+                    layout_depth_id = f[layout_depths[i][0]]
+                    layout_seg_id = f[layout_segs[i][0]]
+                    the_model = f[models[i][0]]
+                    the_point = f[points[i][0]]
+
+                    the_point = np.array(the_point)
+                    the_model_faces = the_model['face']
+                    the_model_params = the_model['params']
+
+
+                    faces = []
+                    params = []
+                    for j in range(len(the_model_faces)):
+                        face = f[the_model_faces[j][0]][0][0]
+                        param = f[the_model_params[j][0]][0][0]
+                        faces.append(face)  
+                        params.append(param)
+                    self.faces.append(faces) 
+                    self.params.append(params) 
+                
+                    self.points.append(the_point)
+
+                    the_string = ''
+                    for item in depth_id: 
+                        the_string += chr(item[0])
+                    self.depth_filenames.append(the_string)
+
+
+                    the_string = ''
+                    for item in init_label_id: 
+                        the_string += chr(item[0])
+                    self.init_label_filenames.append(the_string)
+
+                    the_string = ''
+                    for item in layout_depth_id: 
+                        the_string += chr(item[0])
+                    self.layout_depth_filenames.append(the_string)
+
+                    the_string = ''
+                    for item in layout_seg_id: 
+                        the_string += chr(item[0])
+                    self.layout_seg_filenames.append(the_string)
 
         self.depths = [] 
         self.images = [] 
@@ -107,42 +116,44 @@ class MatterPortDataSet(Dataset):
         self.layout_depths = []
         self.layout_segs = []
         for i in range(self.length):
-            base_name = self.depth_filenames[i][:-4]
-            depth_name = os.path.join(self.base_dir, self.type, 'depth', self.depth_filenames[i])
+
             image_name = os.path.join(self.base_dir, self.type, 'image', self.image_filenames[i])
-            init_label_name = os.path.join(self.base_dir, self.type, 'init_label', self.init_label_filenames[i])
-            layout_depth_name = os.path.join(self.base_dir, self.type, 'layout_depth', self.layout_depth_filenames[i])
-            layout_seg_name = os.path.join(self.base_dir, self.type, 'layout_seg', self.layout_seg_filenames[i])
-            nx_name = os.path.join(self.base_dir, self.type, 'normal', base_name + '_nx.png')
-            ny_name = os.path.join(self.base_dir, self.type, 'normal', base_name + '_ny.png')
-            nz_name = os.path.join(self.base_dir, self.type, 'normal', base_name + '_nz.png')
-            boundary_name = os.path.join(self.base_dir, self.type, 'normal', base_name + '_boundary.png')
-            radius_name = os.path.join(self.base_dir, self.type, 'normal', base_name + '_radius.png')
-
-            depth = io.imread(depth_name)
             image = io.imread(image_name)
-            init_label = io.imread(init_label_name)
-            layout_depth = io.imread(layout_depth_name)
-            layout_seg = io.imread(layout_seg_name)
-
-            nx = io.imread(nx_name)
-            ny = io.imread(ny_name)
-            nz = io.imread(nz_name)
-            boundary = io.imread(boundary_name)   
-            radius = io.imread(radius_name)    
-            nx = nx.reshape((nx.shape[0], nx.shape[1], 1))
-            ny = ny.reshape((ny.shape[0], ny.shape[1], 1))
-            nz = nz.reshape((nz.shape[0], nz.shape[1], 1))
-            norm = np.concatenate((nx, ny, nz), axis = 2)
-            
-            self.depths.append(depth)
             self.images.append(image)
-            self.init_labels.append(init_label)
-            self.layout_depths.append(layout_depth)
-            self.layout_segs.append(layout_seg)
-            self.norms.append(norm)  
-            self.boundarys.append(boundary) 
-            self.radiuss.append(radius)  
+            if not the_type == 'testing':
+                base_name = self.depth_filenames[i][:-4]
+                depth_name = os.path.join(self.base_dir, self.type, 'depth', self.depth_filenames[i])
+                init_label_name = os.path.join(self.base_dir, self.type, 'init_label', self.init_label_filenames[i])
+                layout_depth_name = os.path.join(self.base_dir, self.type, 'layout_depth', self.layout_depth_filenames[i])
+                layout_seg_name = os.path.join(self.base_dir, self.type, 'layout_seg', self.layout_seg_filenames[i])
+                nx_name = os.path.join(self.base_dir, self.type, 'normal', base_name + '_nx.png')
+                ny_name = os.path.join(self.base_dir, self.type, 'normal', base_name + '_ny.png')
+                nz_name = os.path.join(self.base_dir, self.type, 'normal', base_name + '_nz.png')
+                boundary_name = os.path.join(self.base_dir, self.type, 'normal', base_name + '_boundary.png')
+                radius_name = os.path.join(self.base_dir, self.type, 'normal', base_name + '_radius.png')
+
+                depth = io.imread(depth_name)
+                init_label = io.imread(init_label_name)
+                layout_depth = io.imread(layout_depth_name)
+                layout_seg = io.imread(layout_seg_name)
+
+                nx = io.imread(nx_name)
+                ny = io.imread(ny_name)
+                nz = io.imread(nz_name)
+                boundary = io.imread(boundary_name)   
+                radius = io.imread(radius_name)    
+                nx = nx.reshape((nx.shape[0], nx.shape[1], 1))
+                ny = ny.reshape((ny.shape[0], ny.shape[1], 1))
+                nz = nz.reshape((nz.shape[0], nz.shape[1], 1))
+                norm = np.concatenate((nx, ny, nz), axis = 2)
+            
+                self.depths.append(depth)
+                self.init_labels.append(init_label)
+                self.layout_depths.append(layout_depth)
+                self.layout_segs.append(layout_seg)
+                self.norms.append(norm)  
+                self.boundarys.append(boundary) 
+                self.radiuss.append(radius)  
  
     def __getitem__(self, i):
         '''
@@ -150,7 +161,10 @@ class MatterPortDataSet(Dataset):
         parameter: the index 
         return: the data
         '''
-        return self.depths[i], self.images[i], self.init_labels[i], self.layout_depths[i], self.layout_segs[i], \
+        if self.type == 'testing':
+            return self.images[i], self.intrinsics[i]
+        else:
+            return self.depths[i], self.images[i], self.init_labels[i], self.layout_depths[i], self.layout_segs[i], \
             self.faces[i], self.params[i], self.intrinsics[i], self.points[i], self.norms[i], self.boundarys[i], self.radiuss[i]
  
     def __len__(self):
@@ -178,3 +192,9 @@ print('point:', point, point.shape)
 print('norm:', norm, norm.shape)
 print('boundary:', boundary, boundary.shape)
 print('radius:', radius, radius.shape)
+
+b = MatterPortDataSet('E:\\dataset\\geolayout', 'testing')
+print('length:', b.__len__())
+image, intrinsic = b.__getitem__(10)
+print('image:', image, image.shape)
+print('intrinsic:', intrinsic, intrinsic.shape)
