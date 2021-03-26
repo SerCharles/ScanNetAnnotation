@@ -140,7 +140,7 @@ class R(nn.Module):
         self.bn1 = nn.BatchNorm2d(num_features)
 
         self.conv2 = nn.Conv2d(
-            num_features, 1, kernel_size=5, stride=1, padding=2, bias=True)
+            num_features, 4, kernel_size=5, stride=1, padding=2, bias=True)
 
     def forward(self, x):
         x0 = self.conv0(x)
