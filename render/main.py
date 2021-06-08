@@ -7,6 +7,7 @@ import argparse
 import glob
 import lib.render as render
 import data_loader
+import time
 
 def read_intrinsic(full_name):
     '''
@@ -49,11 +50,13 @@ def render_one_scene(base_dir, scene_name, picture_name_list):
     parameter: the base dir of data, the scene name, the list of picture name lists
     return: empty
     '''
-    input_name = os.path.join(base_dir, 'mesh', scene_name + '_seg.ply')
-    V, VC, F = data_loader.LoadPLY(input_name)
+    #input_name = os.path.join(base_dir, 'mesh', scene_name + '_seg.ply')
+    input_name = '/home/shenguanlin/scene0000_00_vh_clean.ply'
+    V, VC, F = data_loader.LoadDensePLY(input_name)
     context = render.SetMesh(V, F)
 
     for i in range(len(picture_name_list)):
+        '''
         picture_name = picture_name_list[i]
         base_name = picture_name[:-9]
         group_name = picture_name[-7]
@@ -63,9 +66,15 @@ def render_one_scene(base_dir, scene_name, picture_name_list):
         full_name_intrinsic = os.path.join(base_dir, 'intrinsic', full_name)
         full_name_pose = os.path.join(base_dir, 'pose', full_name)
         fx, fy, cx, cy = read_intrinsic(full_name_intrinsic)
-        pose = read_pose(full_name_pose)
 
-        info = {'Height':1024, 'Width':1280, 'fx':fx, 'fy':fy, 'cx':cx, 'cy':cy}
+        pose = read_pose(full_name_pose)
+        '''
+        pose = [[-0.955421, 0.119616, -0.269932, 2.655830],
+            [0.295248, 0.388339, -0.872939, 2.981598],
+            [0.000408, -0.913720, -0.406343, 1.368648],
+            [0.000000, 0.000000, 0.000000, 1.000000]]
+
+        info = {'Height':968, 'Width':1296, 'fx':1170.187988, 'fy':1170.187988, 'cx':647.75, 'cy':483.75}
         render.setup(info)
 
         cam2world = pose 
@@ -74,12 +83,16 @@ def render_one_scene(base_dir, scene_name, picture_name_list):
         vindices, vweights, findices = render.getVMap(context, info)
         #render.Clear()
 
+        start = time.time()
+
         x_shape = findices.shape[0]
         y_shape = findices.shape[1]
         final_color = np.zeros((x_shape, y_shape, 3), dtype='float32')
 
+
         H = vindices.shape[0]
         W = vindices.shape[1]
+        print(vindices.shape)
         for k in range(vindices.shape[2]):
             indice = vindices[:, :, k]
             weight = vweights[:, :, k]
@@ -88,12 +101,15 @@ def render_one_scene(base_dir, scene_name, picture_name_list):
             color = VC[indice]
             final_color = final_color + color * weight
 
-        result_name = base_name + '_s' + group_name + '_' + ins_name + '.png'
-        full_result_name = os.path.join(base_dir, 'segs', result_name)
-
+        #result_name = base_name + '_s' + group_name + '_' + ins_name + '.png'
+        #full_result_name = os.path.join(base_dir, 'segs', result_name)
+        full_result_name = '/home/shenguanlin/kebab.png'
         final_color = (final_color * 255).astype(np.uint8)
         sio.imsave(full_result_name, final_color)
         print('written', full_result_name)
+
+        end = time.time()
+        print((end - start), 's')
 
 def get_scene_names(base_dir, scene_name):
     '''
@@ -125,8 +141,9 @@ def main():
     args = parser.parse_args()
     args.scene_name = args.conf_name[:-5]
 
-    picture_name_list = get_scene_names(args.base_dir, args.scene_name)
-    print('Rendering', args.scene_name)
+    #picture_name_list = get_scene_names(args.base_dir, args.scene_name)
+    #print('Rendering', args.scene_name)
+    picture_name_list = ['kebab']
     render_one_scene(args.base_dir, args.scene_name, picture_name_list)
 
     
