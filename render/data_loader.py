@@ -1,62 +1,41 @@
 import numpy as np
 import skimage.io as sio
 from plyfile import *
+from math import *
+
+from skimage.util import dtype
+
+def transform_norm(norm, world2cam):
+    '''
+    description: transform, normalize and set positive the norm
+    parameter: norm, world2cam
+    return: new norm
+    '''
+    rotate = world2cam[0:3, 0:3]
+    print(norm.shape)
+    norm = np.swapaxes(norm, 0, 1)
+    norm_cam = np.dot(rotate, norm)
+    norm_cam = np.swapaxes(norm_cam, 0, 1)
+    whether_z_positive = np.repeat((norm_cam[:, 2:3] > 0), 3, axis = 1)
+    whether_z_negative = ~whether_z_positive
+    real_norm = norm_cam * whether_z_negative + (-norm_cam) * whether_z_positive
+    real_norm = real_norm + 1.0
+    return real_norm
+
+
+
+
 
 def LoadPLY(model_path):
     '''
-    description: load the ply file with only points with color, vertexs, and normal
-    input: model_path
-    return: vertexs, vertex_colors, faces
-    '''
-    f = open(model_path, 'r')
-    lines = f.read().split('\n')
-    f.close()
-        
-    vertex_num = int(lines[3].split()[-1])
-    face_num = int(lines[14].split()[-1])
-    my_vertexs = []
-    my_vertex_norms = []
-    my_vertex_colors = []
-    my_faces = []
-    for i in range(vertex_num):
-        line = lines[17 + i]
-        words = line.split()
-        x = float(words[0])
-        y = float(words[1])
-        z = float(words[2])
-        nx = float(words[3])
-        ny = float(words[4])
-        nz = float(words[5])
-        r = float(words[6])
-        g = float(words[7])
-        b = float(words[8])
-        my_vertexs.append([x, y, z])
-        my_vertex_norms.append([nx, ny, nz])
-        my_vertex_colors.append([r / 255, g / 255, b / 255])
-    for i in range(face_num):
-        line = lines[17 + vertex_num + i]
-        words = line.split()
-        a = int(words[1])
-        b = int(words[2])
-        c = int(words[3])
-        f = [a, b, c]
-        my_faces.append(f)
-    
-    F = np.array(my_faces, dtype = 'int32')
-    V = np.array(my_vertexs, dtype = 'float32')
-    VC = np.array(my_vertex_colors, dtype = 'float32')
-    return V, VC, F
-
-def LoadDensePLY(model_path):
-    '''
     description: load the zipped ply file with only points with color, vertexs, and normal
     input: model_path
-    return: vertexs, vertex_colors, faces
+    return: vertexs, faces, norm, color
     '''
     plydata = PlyData.read(model_path)
     my_vertexs = []
-    my_vertex_norms = []
-    my_vertex_colors = []
+    my_norms = []
+    my_colors = []
     my_faces = []
 
     vertexs = plydata['vertex']
@@ -68,22 +47,28 @@ def LoadDensePLY(model_path):
         nx = float(vertexs[i][3])
         ny = float(vertexs[i][4])
         nz = float(vertexs[i][5])
-        r = float(vertexs[i][6])
-        g = float(vertexs[i][7])
-        b = float(vertexs[i][8])
+        r = float(vertexs[i][6]) / 256
+        g = float(vertexs[i][7]) / 256
+        b = float(vertexs[i][8]) / 256
+
         my_vertexs.append([x, y, z])
-        my_vertex_norms.append([nx, ny, nz])
-        my_vertex_colors.append([r / 255, g / 255, b / 255])
+        my_colors.append([r, g, b])
+        my_norms.append([nx, ny, nz])
+
 
     for i in range(faces.count):
         a = int(faces[i][0][0])
         b = int(faces[i][0][1])
         c = int(faces[i][0][2])
         my_faces.append([a, b, c])
+    
     F = np.array(my_faces, dtype = 'int32')
     V = np.array(my_vertexs, dtype = 'float32')
-    VC = np.array(my_vertex_colors, dtype = 'float32')
-    return V, VC, F
+    C = np.array(my_colors, dtype = 'float32')
+    NORM = np.nan_to_num(np.array(my_norms, dtype = 'float32'))
+
+
+    return V, F, NORM, C
 
 
 def LoadOBJ(model_path):
