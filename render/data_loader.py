@@ -12,7 +12,6 @@ def transform_norm(norm, world2cam):
     return: new norm
     '''
     rotate = world2cam[0:3, 0:3]
-    print(norm.shape)
     norm = np.swapaxes(norm, 0, 1)
     norm_cam = np.dot(rotate, norm)
     norm_cam = np.swapaxes(norm_cam, 0, 1)
@@ -22,11 +21,59 @@ def transform_norm(norm, world2cam):
     real_norm = real_norm + 1.0
     return real_norm
 
+def load_intrinsic(full_name):
+    '''
+    description: read the intrinsic
+    parameter: full_name
+    return: width, height, fx, fy, cx, cy
+    '''
+    width = 0
+    height = 0
+    fx = 0.0
+    fy = 0.0 
+    cx = 0.0
+    cy = 0.0
+    f = open(full_name, 'r')
+    lines = f.read().split('\n')
+    for line in lines: 
+        words = line.split()
+        if len(words) > 0:
+            if words[0] == 'm_colorWidth':
+                width = int(words[2])
+            elif words[0] == 'm_colorHeight':
+                height = int(words[2])
+            elif words[0] == 'm_calibrationColorIntrinsic':
+                fx = float(words[2])
+                fy = float(words[7])
+                cx = float(words[4])
+                cy = float(words[8])
+    f.close()
+    return width, height, fx, fy, cx, cy
+
+def load_pose(full_name):
+    '''
+    description: read the extrinsic
+    parameter: full_name
+    return: numpy array of extrinsic
+    '''
+    pose = np.zeros((4, 4), dtype = np.float32)
+    f = open(full_name, 'r')
+    lines = f.read().split('\n')
+    
+    for i in range(4):
+        words = lines[i].split()
+        for j in range(4):
+            word = float(words[j])
+            pose[i][j] = word
+
+    pose = pose.astype(np.float32)
+    f.close()
+    return pose
 
 
 
 
-def LoadPLY(model_path):
+def load_ply(model_path):
     '''
     description: load the zipped ply file with only points with color, vertexs, and normal
     input: model_path
@@ -67,39 +114,5 @@ def LoadPLY(model_path):
     C = np.array(my_colors, dtype = 'float32')
     NORM = np.nan_to_num(np.array(my_norms, dtype = 'float32'))
 
-
     return V, F, NORM, C
 
-
-def LoadOBJ(model_path):
-    '''
-    description: load the obj file with only points with color, vertexs, no normal or texture
-    input: model_path
-    return: vertexs, vertex_colors, faces
-    '''
-    vertexs = []
-    vertex_colors = []
-    faces = []
-    lines = [l.strip() for l in open(model_path)]
-
-    for l in lines:
-        words = [w for w in l.split(' ') if w != '']
-        if len(words) == 0:
-            continue
-
-    if words[0] == 'v':
-        vertexs.append([float(words[1]), float(words[2]), float(words[3])])
-        vertex_colors.append([float(words[4]), float(words[5]), float(words[6])])
-
-    elif words[0] == 'f':
-        f = []
-        for j in range(1, len(words)):
-            f.append(int(words[j]))
-        faces.append(f)
-
-    F = np.array(faces, dtype = 'int32')
-    V = np.array(vertexs, dtype = 'float32')
-    V = (V * 0.5).astype('float32')
-    VC = np.array(vertex_colors, dtype = 'float32')
-
-    return V, VC, F

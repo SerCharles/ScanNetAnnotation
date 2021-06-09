@@ -2,11 +2,11 @@
 base_code=/home/shenguanlin/pyrender
 base_data=/data/sgl/geolayout_pretrain
 
-cd $base_data/data_list 
+cd $base_data
 
-confs=$(ls *)
+scenes=$(ls *)
 cd $base_code
-for conf in $confs 
+for scene in $scenes
 do 
-    python main.py --base_dir=$base_data --conf_name=$conf
+    python main.py --base_dir=$base_data --scene_id=$scene
 done 
