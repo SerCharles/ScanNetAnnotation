@@ -92,24 +92,6 @@ def render_one_scene(base_dir, scene_id):
 
 
 
-def get_scene_names(base_dir, scene_name):
-    '''
-    description: get the names of the relative picture names of the scene
-    parameter: the base dir of data
-    return: name lists
-    '''
-    picture_name_list = []
-    file_name = os.path.join(base_dir, 'data_list', scene_name + '.conf')
-    f = open(file_name, 'r')
-    lines = f.read().split('\n')
-    for line in lines:
-        words = line.split()
-        if len(words) > 0 and words[0] == 'scan':
-            picture_name_list.append(words[1])
-    f.close()
-    return picture_name_list
-
-
 def main():
     '''
     description: the main function of data rendering

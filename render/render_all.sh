@@ -1,10 +1,10 @@
 
-base_code=/home/shenguanlin/ScanNetAnnotation/pyrender
+base_code=/home/shenguanlin/ScanNetAnnotation/render
 base_data=/home1/shenguanlin/scannet_pretrain
 
 cd $base_data
 
-scenes=$(ls *)
+scenes=$(ls)
 cd $base_code
 for scene in $scenes
 do 
