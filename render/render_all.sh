@@ -1,6 +1,6 @@
 
-base_code=/home/shenguanlin/pyrender
-base_data=/data/sgl/geolayout_pretrain
+base_code=/home/shenguanlin/ScanNetAnnotation/pyrender
+base_data=/home1/shenguanlin/scannet_pretrain
 
 cd $base_data
 
