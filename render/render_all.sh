@@ -1,12 +1,15 @@
 
-base_code=/home/shenguanlin/ScanNetAnnotation/render
+base_code=/home/shenguanlin/render
 base_data=/home1/shenguanlin/scannet_pretrain
 
 cd $base_data
 
 scenes=$(ls)
-cd $base_code
 for scene in $scenes
 do 
+    cd $base_code
     python main.py --base_dir=$base_data --scene_id=$scene
+    cd $base_data/$scene 
+    rm -rf depth 
+    mv new_depth depth
 done 

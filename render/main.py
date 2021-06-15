@@ -19,6 +19,9 @@ def render_one_scene(base_dir, scene_id):
     save_dir = os.path.join(base_dir, scene_id, 'norm')
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
+    save_dir = os.path.join(base_dir, scene_id, 'new_depth')
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
     input_name = os.path.join(base_dir, scene_id, 'ply', scene_id + '_vh_clean.ply')
     full_name_list = glob.glob(os.path.join(base_dir, scene_id, 'pose', "*.txt"))
     id_list = []
@@ -44,7 +47,9 @@ def render_one_scene(base_dir, scene_id):
         world2cam = np.linalg.inv(cam2world).astype('float32')
         render.render(context, world2cam)
         vindices, vweights, findices = render.getVMap(context, info)
+        depth = render.getDepth(info)
 
+        
         the_norm = transform_norm(NORM, world2cam)
         x_shape = findices.shape[0]
         y_shape = findices.shape[1]
@@ -62,17 +67,25 @@ def render_one_scene(base_dir, scene_id):
             color_value = C[indice]
             final_color = final_color + color_value * weight
             final_norm = final_norm + norm_value * weight
+    
+        final_depth = (depth * 1000).astype(np.uint16)
         final_norm = (final_norm * 32768).astype(np.uint16)
         final_color = (final_color * 256).astype(np.uint8)
 
+        result_name_depth = scene_id + '_' + str(id) + '.png'  
         result_name_nx = scene_id + '_' + str(id) + '_nx.png'  
         result_name_ny = scene_id + '_' + str(id) + '_ny.png'  
         result_name_nz = scene_id + '_' + str(id) + '_nz.png'  
 
+        full_result_name_depth = os.path.join(base_dir, scene_id, 'new_depth', result_name_depth)
         full_result_name_nx = os.path.join(base_dir, scene_id, 'norm', result_name_nx)
         full_result_name_ny = os.path.join(base_dir, scene_id, 'norm', result_name_ny)
         full_result_name_nz = os.path.join(base_dir, scene_id, 'norm', result_name_nz)
         
+        picture_depth = Image.fromarray(final_depth)
+        picture_depth.save(full_result_name_depth)
+        print('written', full_result_name_depth)
+
 
         final_nx = final_norm[:, :, 0]
         picture_nx = Image.fromarray(final_nx)
@@ -88,6 +101,8 @@ def render_one_scene(base_dir, scene_id):
         picture_nz = Image.fromarray(final_nz)
         picture_nz.save(full_result_name_nz)
         print('written', full_result_name_nz)
+
+
         
 
 
