@@ -98,29 +98,8 @@ def clear_one(base_dir, scene_id):
     os.system('rm -rf ' + os.path.join(base_dir, scene_id, 'label-filt'))
 
 
-def split_train_valid(base_dir):
-    """[split the training scenes and validation scenes]
-    Args:
-        base_dir ([str]): [the base directory of my handled scannet dataset]
-    """
-    train_name = os.path.join(base_dir, 'train.txt')
-    valid_name = os.path.join(base_dir, 'valid.txt')
-    f_train = open(train_name, 'w')
-    f_valid = open(valid_name, 'w')
-    for name in glob.glob(os.path.join(base_dir, '*')):
-        scene_id = name.split(os.sep)[-1]
-        if scene_id == 'train.txt' or scene_id == 'valid.txt':
-            continue 
-        id_num = int(scene_id[5:9])
-        if id_num <= 650:
-            f_train.write(scene_id + '\n')
-        else: 
-            f_valid.write(scene_id + '\n')
 
-    f_train.close()
-    f_valid.close()
 
-    
 def main():
     """[main function of data clearing]
     """
@@ -130,7 +109,6 @@ def main():
     args = parser.parse_args()
 
     clear_one(args.base_dir, args.scene_id)
-    split_train_valid(args.base_dir)
     
 
 if __name__ == "__main__":

@@ -35,5 +35,5 @@ do
     sudo chmod -R 777 $base_target
     cd $base_code
     python data_selection.py --base_dir=$base_target --scene_id=$file
-
 done
+
