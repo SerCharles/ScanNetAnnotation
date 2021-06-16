@@ -122,11 +122,52 @@ def load_planes(base_dir, scene_id):
     Args:
         base_dir ([str]): [the base directory of ScanNet-Planes dataset]
         scene_id ([str]): [the scene id]
+    
+
+    Returns:
+        V [float32 numpy array]: [vertexs]
+        F [int32 numpy array]: [faces]
+        NORM [float32 numpy array]: [norms of each face]
+        L [int32 numpy array]: [labels of each face]
+
     """
+
     full_name_ply = os.path.join(base_dir, scene_id + '.ply')
     full_name_info = os.path.join(base_dir, scene_id + '.json')
+    vertexs = []
+    faces = []
+    f = open(full_name_ply, 'r')
+    lines = f.read().split('\n')
+    f.close()
+    vertex_num = int(lines[2].split()[-1])
+    face_num = int(lines[6].split()[-1])
+    for i in range(vertex_num):
+        line = lines[i + 9]
+        words = line.split()
+        x = float(words[0])
+        y = float(words[1])
+        z = float(words[2])
+        vertex = [x, y, z]
+        vertexs.append(vertex)
+    for i in range(face_num):
+        line = lines[i + vertex_num + 9]
+        words = line.split()
+        a = int(words[1])
+        b = int(words[2])
+        c = int(words[3])
+        face = [a, b, c]
+        faces.append(face)
+    with open(full_name_info, 'r', encoding = 'utf8')as fp:
+        data = json.load(fp)
+    norms = data['norms']
+    labels = data['labels']
+    F = np.array(faces, dtype = 'int32')
+    V = np.array(vertexs, dtype = 'float32')
+    L = np.array(labels, dtype = 'int32')
+    NORM = np.nan_to_num(np.array(norms, dtype = 'float32'))
+
+    return V, F, NORM, L
 
 
 
 
-load_planes('E:\\dataset\\scannet_planes', 'scene0000_01')

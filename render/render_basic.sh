@@ -8,7 +8,7 @@ scenes=$(ls)
 for scene in $scenes
 do 
     cd $base_code
-    python main.py --base_dir=$base_data --scene_id=$scene
+    python render_basic.py --base_dir=$base_data --scene_id=$scene
     cd $base_data/$scene 
     rm -rf depth 
     mv new_depth depth
