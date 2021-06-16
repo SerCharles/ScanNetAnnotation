@@ -1,9 +1,8 @@
 import numpy as np
-import skimage.io as sio
+import os
 from plyfile import *
 from math import *
-
-from skimage.util import dtype
+import json
 
 def transform_norm(norm, world2cam):
     '''
@@ -116,3 +115,18 @@ def load_ply(model_path):
 
     return V, F, NORM, C
 
+
+def load_planes(base_dir, scene_id):
+    """[load the ScanNet-Planes dataset]
+
+    Args:
+        base_dir ([str]): [the base directory of ScanNet-Planes dataset]
+        scene_id ([str]): [the scene id]
+    """
+    full_name_ply = os.path.join(base_dir, scene_id + '.ply')
+    full_name_info = os.path.join(base_dir, scene_id + '.json')
+
+
+
+
+load_planes('E:\\dataset\\scannet_planes', 'scene0000_01')

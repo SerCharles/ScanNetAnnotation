@@ -16,6 +16,7 @@ do
     mkdir $base_target/$file 
     mkdir $base_target/$file/ply
 
+    ply_name_full="_vh_clean.ply"
     sens_name=".sens"
     instance_name="_2d-instance-filt.zip"
     label_name="_2d-label-filt.zip"
@@ -32,6 +33,8 @@ do
     cp $base_source/$file/$file$seg_name $base_target/$file/ply/$file$seg_name
     cp $base_source/$file/$file$aggregation_name $base_target/$file/ply/$file$aggregation_name
     cp $base_source/$file/$file$json_name $base_target/$file/ply/$file$json_name
+    cp $base_source/$file/$file$ply_name_full $base_target/$file/ply/$file$ply_name_full
+
     sudo chmod -R 777 $base_target
     cd $base_code
     python data_selection.py --base_dir=$base_target --scene_id=$file

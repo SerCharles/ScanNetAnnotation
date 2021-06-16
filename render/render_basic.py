@@ -1,3 +1,7 @@
+'''
+render the basic info of ScanNet, including normal and depth
+'''
+
 import sys
 import numpy as np
 import sys
