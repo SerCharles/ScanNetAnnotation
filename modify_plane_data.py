@@ -89,22 +89,31 @@ def modify_one_scene(base_dir_source, base_dir_target, scene_id):
     save_name_info = os.path.join(base_dir_target, scene_id + '.json')
     with open(full_name_info, 'r', encoding = 'utf8')as fp:
         data = json.load(fp)
-    vertexs = data['verts']
+    vertexs = [[0.0, 0.0, 0.0]] + data['verts']
     planes = data['quads']
-    faces = []
-    face_labels = []
-    face_norms = []
+    faces = [[0, 0, 0]]
+    face_labels = [0]
+    face_norms = [[0.0, 0.0, 0.0]]
 
+    '''
+    for i in range(len(vertexs)):
+        vertex = vertexs[i]
+        x = vertex[0]
+        y = vertex[1]
+        z = vertex[2]
+        vertexs[i][2] = y 
+        vertexs[i][1] = -z
+    '''
     for i in range(len(planes)):
         plane = planes[i]
         point_list = []
         for j in range(len(plane)):
-            point_list.append(vertexs[plane[j]])
+            point_list.append(vertexs[plane[j] + 1])
         normal = calculate_normal(point_list)
         for j in range(len(plane) - 2):
-            new_face = [plane[0], plane[j + 1], plane[j + 2]]
+            new_face = [plane[0] + 1, plane[j + 1] + 1, plane[j + 2] + 1]
             faces.append(new_face)
-            face_labels.append(i)
+            face_labels.append(i + 1)
             face_norms.append(normal)
 
 

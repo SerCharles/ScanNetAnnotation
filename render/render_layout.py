@@ -2,7 +2,6 @@
 render the layout info of ScanNet, including layout depth, norm, seg
 '''
 
-from render.data_loader import load_planes
 import sys
 import numpy as np
 import sys
@@ -10,7 +9,7 @@ import os
 import argparse
 import glob
 import lib.render as render
-from data_loader import *
+from  data_loader import *
 import time
 import PIL.Image as Image
 
@@ -72,13 +71,12 @@ def render_one_scene(base_dir_scannet, base_dir_plane, scene_id):
 
         final_seg = L[findices]
         final_norm = the_norm[findices]
-        print(final_seg.shape)
-        print(final_norm.shape)
+
 
     
-        final_depth = (depth * 1000).astype(np.uint16)
+        final_depth = (depth * 10000).astype(np.uint16)
         final_norm = (final_norm * 32768).astype(np.uint16)
-        final_seg = (final_seg * 3000).astype(np.uint16)
+        final_seg = (final_seg * 7000).astype(np.uint16)
 
         result_name_seg = scene_id + '_' + str(id) + '.png'  
         result_name_depth = scene_id + '_' + str(id) + '.png'  
