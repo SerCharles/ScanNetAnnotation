@@ -21,7 +21,7 @@ def split_train_valid(base_dir):
             continue 
         
         try:
-            depth_names = glob.glob(os.path.join(base_dir, scene_id, 'depth', '*.png'))
+            depth_names = glob.glob(os.path.join(base_dir, scene_id, 'new_depth', '*.png'))
             norm_names = glob.glob(os.path.join(base_dir, scene_id, 'norm', '*.png'))
             num_depth = len(depth_names)
             num_norm = len(norm_names)
@@ -29,7 +29,8 @@ def split_train_valid(base_dir):
             num_depth = 0
             num_norm = 0
 
-        if num_norm <= 0 or num_depth <= 0:
+        if num_norm <= 0 or num_depth <= 0 or num_norm / num_depth != 3:
+            print(scene_id)
             continue
 
         id_num = int(scene_id[5:9])
@@ -47,7 +48,7 @@ def main():
     """[main function of data clearing]
     """
     parser = argparse.ArgumentParser(description = '')
-    parser.add_argument('--base_dir', default = '/home/shenguanlin/scannet_pretrain', type = str)
+    parser.add_argument('--base_dir', default = '/home1/shenguanlin/scannet_pretrain', type = str)
     args = parser.parse_args()
     split_train_valid(args.base_dir)
 
