@@ -13,6 +13,8 @@ def split_train_valid(base_dir):
     """
     train_name = os.path.join(base_dir, 'train.txt')
     valid_name = os.path.join(base_dir, 'valid.txt')
+    train_list = []
+    valid_list = []
     f_train = open(train_name, 'w')
     f_valid = open(valid_name, 'w')
     for name in glob.glob(os.path.join(base_dir, '*')):
@@ -21,7 +23,7 @@ def split_train_valid(base_dir):
             continue 
         
         try:
-            depth_names = glob.glob(os.path.join(base_dir, scene_id, 'new_depth', '*.png'))
+            depth_names = glob.glob(os.path.join(base_dir, scene_id, 'depth', '*.png'))
             norm_names = glob.glob(os.path.join(base_dir, scene_id, 'norm', '*.png'))
             num_depth = len(depth_names)
             num_norm = len(norm_names)
@@ -35,9 +37,16 @@ def split_train_valid(base_dir):
 
         id_num = int(scene_id[5:9])
         if id_num <= 650:
-            f_train.write(scene_id + '\n')
+            train_list.append(scene_id)
         else: 
-            f_valid.write(scene_id + '\n')
+            valid_list.append(scene_id)
+
+    train_list.sort()
+    valid_list.sort()
+    for scene_id in train_list:
+        f_train.write(scene_id + '\n')
+    for scene_id in valid_list:
+        f_valid.write(scene_id + '\n')
 
     f_train.close()
     f_valid.close()
