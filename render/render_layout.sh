@@ -3,7 +3,7 @@ base_code=/home/shenguanlin/ScanNetAnnotation/render
 base_data_scannet=/home1/shenguanlin/scannet_pretrain
 base_data_plane=/home1/shenguanlin/scannet_planes
 
-cd $base_data
+cd $base_data_scannet
 
 scenes=$(ls)
 for scene in $scenes
