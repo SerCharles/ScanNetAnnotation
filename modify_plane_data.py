@@ -95,7 +95,7 @@ def modify_one_scene(base_dir_source, base_dir_target, scene_id):
     face_labels = [0]
     face_norms = [[0.0, 0.0, 0.0]]
 
-    '''
+    
     for i in range(len(vertexs)):
         vertex = vertexs[i]
         x = vertex[0]
@@ -103,7 +103,7 @@ def modify_one_scene(base_dir_source, base_dir_target, scene_id):
         z = vertex[2]
         vertexs[i][2] = y 
         vertexs[i][1] = -z
-    '''
+    
     for i in range(len(planes)):
         plane = planes[i]
         point_list = []
