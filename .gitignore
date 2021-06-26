@@ -240,7 +240,7 @@ _Pvt_Extensions
 
 # Paket dependency manager
 .paket/paket.exe
-transfer_data.sh
+load_data/transfer_data.sh
 # FAKE - F# Make
 .fake/
 

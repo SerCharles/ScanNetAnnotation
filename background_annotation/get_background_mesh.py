@@ -69,6 +69,13 @@ def split_line_points():
 def split_inner_points():
     pass
 
+def split_one_mesh(vertexs, faces):
+    """[summary]
+
+    Args:
+        vertexs ([type]): [description]
+        faces ([type]): [description]
+    """
 
 def get_background_mesh(base_dir, scene_id):
     """[get the background mesh based on the original info]

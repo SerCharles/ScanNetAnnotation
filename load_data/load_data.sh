@@ -1,5 +1,5 @@
 scannet_code=/home/shenguanlin/ScanNet
-base_code=/home/shenguanlin/ScanNetAnnotation
+base_code=/home/shenguanlin/ScanNetAnnotation/load_data
 base_source=/data/sgl/scannet/scans
 base_target=/home/shenguanlin/scannet_pretrain
 
@@ -40,3 +40,5 @@ do
     python data_selection.py --base_dir=$base_target --scene_id=$file
 done
 
+cd $base_code
+python split_data.py --base_dir=$base_target
