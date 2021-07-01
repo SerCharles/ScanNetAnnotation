@@ -125,8 +125,8 @@ def main():
     """[the main function of ScanNet-Planes dataset modification]
     """
     parser = argparse.ArgumentParser(description = '')
-    parser.add_argument('--base_dir_source', default = 'E:\\dataset\\scannet_planes', type = str)
-    parser.add_argument('--base_dir_target', default = 'E:\\dataset\\scannet_planes_mine', type = str)
+    parser.add_argument('--base_dir_source', default = '/home1/shenguanlin/scannet_planes', type = str)
+    parser.add_argument('--base_dir_target', default = '/home1/shenguanlin/scannet_planes_mine', type = str)
     args = parser.parse_args()
     full_name_list = glob.glob(os.path.join(args.base_dir_source, '*.ply'))
     for full_name in full_name_list:
