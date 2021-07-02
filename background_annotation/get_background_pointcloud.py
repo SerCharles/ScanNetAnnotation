@@ -92,7 +92,10 @@ def get_area(a, b, c):
     dist_b = get_dist(b, c)
     dist_c = get_dist(c, a)
 
-    area = sqrt((dist_a + dist_b + dist_c) * (dist_a + dist_b - dist_c) * (dist_a - dist_b + dist_c) * (-dist_a + dist_b + dist_c)) / 4
+    try:
+        area = sqrt((dist_a + dist_b + dist_c) * (dist_a + dist_b - dist_c) * (dist_a - dist_b + dist_c) * (-dist_a + dist_b + dist_c)) / 4
+    except: 
+        area = 0
     return area
 
 def get_average_dist_and_area(full_file_name):
@@ -256,6 +259,8 @@ def main():
     full_name_list = glob.glob(os.path.join(args.base_dir_plane, '*.ply'))
     for full_name in full_name_list:
         scene_id = full_name.split(os.sep)[-1][:-4]
+        if scene_id[-5:] == '_full':
+            continue
         print('Rendering', scene_id)
         get_background_pointcloud(args.base_dir_scannet, args.base_dir_plane, scene_id)
 
