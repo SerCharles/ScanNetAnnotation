@@ -53,7 +53,7 @@ def get_one_scene(base_dir, scene_id):
         source_array = load_grey_image(source_name)
 
         target_array = (source_array == 1) | (source_array == 3) | (source_array == 41)
-        target_array = (target_array * 60000).astype(np.uint16)
+        target_array = (target_array).astype(np.uint16)
         picture = Image.fromarray(target_array)
         picture.save(target_name)
         print('written', target_name)
