@@ -6,10 +6,12 @@ import numpy as np
 import os
 import glob
 
-def split_train_valid(base_dir):
+def split_train_valid(base_dir, base_dir_plane, whether_clear):
     """[split the training scenes and validation scenes]
     Args:
         base_dir ([str]): [the base directory of my handled scannet dataset]
+        base_dir_plane ([str]): [the base directory of my handled scannet plane dataset]
+        whether_clear ([bool]): [clear useless data or not]
     """
     train_name = os.path.join(base_dir, 'train.txt')
     valid_name = os.path.join(base_dir, 'valid.txt')
@@ -25,21 +27,57 @@ def split_train_valid(base_dir):
         try:
             depth_names = glob.glob(os.path.join(base_dir, scene_id, 'depth', '*.png'))
             norm_names = glob.glob(os.path.join(base_dir, scene_id, 'norm', '*.png'))
+            seg_names = glob.glob(os.path.join(base_dir, scene_id, 'seg', '*.png'))
+            layout_seg_names = glob.glob(os.path.join(base_dir, scene_id, 'layout_seg', '*.png'))
+            layout_norm_names = glob.glob(os.path.join(base_dir, scene_id, 'layout_norm', '*.png'))
+            layout_depth_names = glob.glob(os.path.join(base_dir, scene_id, 'layout_depth', '*.png'))
+
             num_depth = len(depth_names)
             num_norm = len(norm_names)
+            num_seg = len(seg_names)
+            num_layout_seg = len(layout_seg_names)
+            num_layout_norm = len(layout_norm_names)
+            num_layout_depth = len(layout_depth_names)
+
         except:
             num_depth = 0
             num_norm = 0
+            num_seg = 0
+            num_layout_seg = 0
+            num_layout_norm = 0
+            num_layout_depth = 0
 
-        if num_norm <= 0 or num_depth <= 0 or num_norm / num_depth != 3:
+        
+        if num_depth <= 0 or num_norm / num_depth != 3 or num_seg != num_depth or \
+            num_layout_seg != num_depth or num_layout_depth != num_depth or num_layout_norm / num_depth != 3 or \
+            (not os.path.exists(os.path.join(base_dir_plane, scene_id + '.ply'))) or \
+                (not os.path.exists(os.path.join(base_dir_plane, scene_id + '_full.ply'))):
             print(scene_id)
+
+            if whether_clear != 0:
+                try:
+                    os.system('rm -rf ' + os.path.join(base_dir, scene_id))
+                    os.remove(os.path.join(base_dir_plane, scene_id + '.ply'))
+                    os.remove(os.path.join(base_dir_plane, scene_id + '_full.ply'))
+                    os.remove(os.path.join(base_dir_plane, scene_id + '.json'))
+                except: 
+                    pass
             continue
+
 
         id_num = int(scene_id[5:9])
         if id_num <= 650:
             train_list.append(scene_id)
         else: 
             valid_list.append(scene_id)
+
+        if whether_clear != 0:
+            try:
+                os.system('rm -rf ' + os.path.join(base_dir, scene_id, 'ply'))
+                os.system('rm -rf ' + os.path.join(base_dir, scene_id, 'label'))
+                os.system('rm -rf ' + os.path.join(base_dir, scene_id, 'instance'))
+            except: 
+                pass
 
     train_list.sort()
     valid_list.sort()
@@ -58,8 +96,11 @@ def main():
     """
     parser = argparse.ArgumentParser(description = '')
     parser.add_argument('--base_dir', default = '/home1/shenguanlin/scannet_pretrain', type = str)
+    parser.add_argument('--base_dir_plane', default = '/home1/shenguanlin/scannet_planes', type = str)
+    parser.add_argument('--clear', default = 0, type = int)
+
     args = parser.parse_args()
-    split_train_valid(args.base_dir)
+    split_train_valid(args.base_dir, args.base_dir_plane, args.clear)
 
 if __name__ == "__main__":
     main()
