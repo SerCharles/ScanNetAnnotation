@@ -76,6 +76,9 @@ def split_train_valid(base_dir, base_dir_plane, whether_clear):
                 os.system('rm -rf ' + os.path.join(base_dir, scene_id, 'ply'))
                 os.system('rm -rf ' + os.path.join(base_dir, scene_id, 'label'))
                 os.system('rm -rf ' + os.path.join(base_dir, scene_id, 'instance'))
+                os.system('mkdir ' + os.path.join(base_dir, scene_id, 'ply'))
+                os.system('cp ' + os.path.join(base_dir_plane, scene_id + '.ply') + ' ' + os.path.join(base_dir, scene_id, 'ply', scene_id + '_mesh.ply'))
+                os.system('cp ' + os.path.join(base_dir_plane, scene_id + '_full.ply') + ' ' + os.path.join(base_dir, scene_id, 'ply', scene_id + '_pcd.ply'))
             except: 
                 pass
 

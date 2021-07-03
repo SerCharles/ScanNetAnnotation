@@ -1,0 +1,5 @@
+numpy==1.20.3
+plyfile==0.7.4
+opencv_python==4.5.2.54
+scipy==1.6.3
+Pillow==8.3.0

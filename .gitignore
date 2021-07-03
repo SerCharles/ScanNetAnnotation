@@ -6,7 +6,6 @@
 *.user
 *.userosscache
 *.sln.docstates
-*.txt
 *.ply
 preprocess/OpenGLRender/OpenGLRender/poses.txt
 PA1_Cliping/bin

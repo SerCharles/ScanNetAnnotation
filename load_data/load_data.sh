@@ -40,5 +40,3 @@ do
     python data_selection.py --base_dir=$base_target --scene_id=$file
 done
 
-cd $base_code
-python split_data.py --base_dir=$base_target
