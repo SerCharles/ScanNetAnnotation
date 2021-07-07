@@ -1,6 +1,6 @@
 
 base_code=/home/shenguanlin/ScanNetAnnotation/render
-base_data=/home1/shenguanlin/scannet_pretrain
+base_data=/home1/shenguanlin/scannet_mine
 
 cd $base_data
 

@@ -1,7 +1,7 @@
 scannet_code=/home/shenguanlin/ScanNet
 base_code=/home/shenguanlin/ScanNetAnnotation/load_data
 base_source=/data/sgl/scannet/scans
-base_target=/home/shenguanlin/scannet_pretrain
+base_target=/home/shenguanlin/scannet_mine
 
 mkdir $base_target
 cd $base_target

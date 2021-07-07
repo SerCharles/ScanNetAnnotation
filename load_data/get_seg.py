@@ -62,7 +62,7 @@ def main():
     """[main function]
     """
     parser = argparse.ArgumentParser(description = '')
-    parser.add_argument('--base_dir', default = '/home1/shenguanlin/scannet_pretrain', type = str)
+    parser.add_argument('--base_dir', default = '/home1/shenguanlin/scannet_mine', type = str)
     args = parser.parse_args()
 
     for name in glob.glob(os.path.join(args.base_dir, '*')):

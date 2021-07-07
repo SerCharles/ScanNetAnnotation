@@ -104,7 +104,7 @@ def main():
     """[main function of data clearing]
     """
     parser = argparse.ArgumentParser(description = '')
-    parser.add_argument('--base_dir', default = '/home/shenguanlin/scannet_pretrain', type = str)
+    parser.add_argument('--base_dir', default = '/home/shenguanlin/scannet_mine', type = str)
     parser.add_argument('--scene_id', default = 'scene0000_00', type = str)
     args = parser.parse_args()
 

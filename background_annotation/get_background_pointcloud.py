@@ -253,7 +253,7 @@ def main():
     """[the main function]
     """
     parser = argparse.ArgumentParser(description = '')
-    parser.add_argument('--base_dir_scannet', default = '/home1/shenguanlin/scannet_pretrain', type = str)
+    parser.add_argument('--base_dir_scannet', default = '/home1/shenguanlin/scannet_mine', type = str)
     parser.add_argument('--base_dir_plane', default = '/home1/shenguanlin/scannet_planes', type = str)
     args = parser.parse_args()
     full_name_list = glob.glob(os.path.join(args.base_dir_plane, '*.ply'))
