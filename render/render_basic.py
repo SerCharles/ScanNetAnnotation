@@ -1,25 +1,26 @@
-'''
-render the basic info of ScanNet, including normal and depth
-'''
+"""render the basic info of ScanNet, including normal and depth
+"""
 
-import sys
 import numpy as np
-import sys
 import os
 import argparse
 import glob
 import lib.render as render
 from data_loader import *
-import time
 import PIL.Image as Image
 
 
 def render_one_scene(base_dir, scene_id):
-    '''
-    description: render one scene
-    parameter: the base dir of data, the scene id
-    return: empty
-    '''
+    """Render the normal and depth of one scene
+        H: the height of the picture
+        W: the width of the picture
+        V: the number of vertexs
+        F: the number of faces
+        
+    Args:
+        base_dir [string]: [the base directory of our modified ScanNet dataset]
+        scene_id [string]: [the scene id]
+    """
     save_dir = os.path.join(base_dir, scene_id, 'norm')
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
@@ -37,38 +38,38 @@ def render_one_scene(base_dir, scene_id):
     intrinsic_name = os.path.join(base_dir, scene_id, '_info.txt')
     width, height, fx, fy, cx, cy = load_intrinsic(intrinsic_name)
 
-    V, F, NORM, C = load_ply(input_name)
-    context = render.SetMesh(V, F)
+    vertexs, faces, norms, colors = load_ply(input_name)
+    context = render.SetMesh(vertexs, faces)
     info = {'Height': height, 'Width': width, 'fx': fx, 'fy': fy, 'cx': cx, 'cy': cy}
     render.setup(info)
 
     for id in id_list:
         pose_name = scene_id + '_' + str(id) + '.txt'
         full_pose_name = os.path.join(base_dir, scene_id, 'pose', pose_name)
-        pose = load_pose(full_pose_name)
-
-        cam2world = pose 
-        world2cam = np.linalg.inv(cam2world).astype('float32')
+        pose = load_pose(full_pose_name) #4 * 4
+        cam2world = pose #4 * 4
+        world2cam = np.linalg.inv(cam2world).astype('float32') #4 * 4
         render.render(context, world2cam)
-        vindices, vweights, findices = render.getVMap(context, info)
-        depth = render.getDepth(info)
 
-        
-        the_norm = transform_norm(NORM, world2cam)
-        x_shape = findices.shape[0]
-        y_shape = findices.shape[1]
-        final_color = np.zeros((x_shape, y_shape, 3), dtype ='float32')
-        final_norm = np.zeros((x_shape, y_shape, 3), dtype ='float32')
+        #findices: H * W, the index of the face which is seen from the pixel
+        #vindices: H * W * 3, the indices of the vertexs which is seen from the pixel, which are the 3 points of the face in findices
+        #vweights: H * W * 3, the ratio of the three points in the triangle
+        vindices, vweights, findices = render.getVMap(context, info) 
+        depth = render.getDepth(info) #H * W
+        modified_norms = transform_norm(norms, world2cam) #V * 3
+
         H = vindices.shape[0]
         W = vindices.shape[1]
+        final_color = np.zeros((H, W, 3), dtype='float32') #H * W * 3
+        final_norm = np.zeros((H, W, 3), dtype='float32') #H * W * 3
 
         for k in range(vindices.shape[2]):
             indice = vindices[:, :, k]
             weight = vweights[:, :, k]
             weight = np.reshape(weight, (H, W, 1))
             weight = np.repeat(weight, 3, axis = 2)
-            norm_value = the_norm[indice]
-            color_value = C[indice]
+            norm_value = modified_norms[indice]
+            color_value = colors[indice]
             final_color = final_color + color_value * weight
             final_norm = final_norm + norm_value * weight
     
@@ -107,19 +108,14 @@ def render_one_scene(base_dir, scene_id):
         print('written', full_result_name_nz)
 
 
-        
-
-
+    
 
 def main():
-    '''
-    description: the main function of data rendering
-    parameter: empty
-    return: empty
-    '''
-    parser = argparse.ArgumentParser(description = '')
-    parser.add_argument('--base_dir', default = '/home1/shenguanlin/scannet_mine', type = str)
-    parser.add_argument('--scene_id', default = 'scene0000_00', type = str)
+    """The main function of basic data rendering
+    """
+    parser = argparse.ArgumentParser(description='')
+    parser.add_argument('--base_dir', default='/home1/shenguanlin/scannet_mine', type=str)
+    parser.add_argument('--scene_id', default='scene0000_00', type=str)
     args = parser.parse_args()
 
     print('Rendering', args.scene_id)

@@ -1,6 +1,5 @@
-'''
-Get the full pointcloud of the background
-'''
+"""Given the mesh of the background of the modified ScanNet-Planes dataset, generate a dense pointcloud of it, used as baseline to be compared against the result of ours
+"""
 import numpy as np
 import os
 from plyfile import *
@@ -9,13 +8,16 @@ import argparse
 import glob
 
 def load_ply(model_path):
-    """[load a ply file]
+    """load a ply file with only point and face
+        V: the number of vertexs
+        F: the number of faces
+
     Args:
-        model_path ([str]): [the place of ply file]
+        model_path [strimng]: [the place of ply file]
 
     Returns:
-        V [numpy float array]: [vertexs]
-        F [numpy int array]: [faces]
+        vertexs [numpy float array], [V * 3]: [vertexs]
+        faces [numpy int array], [F * 3]: [faces]
     """
     plydata = PlyData.read(model_path)
     my_vertexs = []
@@ -35,16 +37,19 @@ def load_ply(model_path):
         c = int(faces[i][0][2])
         my_faces.append([a, b, c])
     
-    F = np.array(my_faces, dtype = 'int32')
-    V = np.array(my_vertexs, dtype = 'float32')
-    return V, F
+    faces = np.array(my_faces, dtype='int32')
+    vertexs = np.array(my_vertexs, dtype='float32')
+    return vertexs, faces
 
-def write_pointcloud_file(filename, points):
-    """[write a pointcloud file]
+
+def write_pointcloud(filename, points):
+    """Write a pointcloud file with only x, y, z
+        V: the number of vertexs
+        F: the number of faces
 
     Args:
-        filename ([str]): [the name of the ply file]
-        points ([float array]): [the 3D point lists]
+        filename [string]: [the name of the file to be saved]
+        points [numpy float array], [V * 3]: [the 3D point lists of the pointcloud to be saved]
     """
 
     with open(filename, 'w') as f:
@@ -65,11 +70,13 @@ def write_pointcloud_file(filename, points):
     return
 
 def get_dist(a, b):
-    """[get the distance between two points]
+    """Get the distance between two points
+        V: the number of vertexs
+        F: the number of faces
 
     Args:
-        a ([numpy float array]): [the place of point a]
-        b ([numpy float array]): [the place of point b]
+        a [numpy float array], [3]: [the place of point a]
+        b [numpy float array], [3]: [the place of point b]
 
     Returns:
         dist [float]: [distance]
@@ -78,20 +85,21 @@ def get_dist(a, b):
     return dist
 
 def get_area(a, b, c):
-    """[get the area of a triangle]
+    """Given the coordinate of the three points, get the area of the triangle
+        V: the number of vertexs
+        F: the number of faces
 
     Args:
-        a ([numpy float array]): [the place of point a]
-        b ([numpy float array]): [the place of point b]
-        c ([numpy float array]): [the place of point c]
+        a [numpy float array], [3]: [the place of point a]
+        b [numpy float array], [3]: [the place of point b]
+        c [numpy float array], [3]: [the place of point c]
 
     Returns:
-        area [float]: [area]
+        area [float]: [the area of the triangle]
     """
     dist_a = get_dist(a, b)
     dist_b = get_dist(b, c)
     dist_c = get_dist(c, a)
-
     try:
         area = sqrt((dist_a + dist_b + dist_c) * (dist_a + dist_b - dist_c) * (dist_a - dist_b + dist_c) * (-dist_a + dist_b + dist_c)) / 4
     except: 
@@ -99,16 +107,17 @@ def get_area(a, b, c):
     return area
 
 def get_average_dist_and_area(full_file_name):
-    """[get average area of original mesh]
+    """Given a scene mesh, get the average dist between two adjacent points and the average area of the faces
+        V: the number of vertexs
+        F: the number of faces
 
     Args:
-        full_file_name ([str]): [the full filename of original mesh]
+        full_file_name [string]: [the full path of original mesh]
 
     Returns:
-        avg_dist [dist]: [the average dist of the lines in the original mesh]
+        avg_dist [float]: [the average dist of between two adjacent points in the original mesh]
         avg_area [float]: [the average area of the triangles in the original mesh]
     """
-
     plydata = PlyData.read(full_file_name)
     my_vertexs = []
     total_area = 0.0 
@@ -123,7 +132,7 @@ def get_average_dist_and_area(full_file_name):
         y = float(vertexs[i][1])
         z = float(vertexs[i][2])
         my_vertexs.append([x, y, z])
-    my_vertexs = np.array(my_vertexs, dtype = 'float32')
+    my_vertexs = np.array(my_vertexs, dtype='float32')
     for i in range(faces.count):
         a = int(faces[i][0][0])
         b = int(faces[i][0][1])
@@ -141,10 +150,12 @@ def get_average_dist_and_area(full_file_name):
     return avg_dist, avg_area
 
 def get_point_pairs(faces):
-    """[get the pairs of the points that have lines in a mesh]
+    """Get the pairs of adjacent points in a mesh
+        V: the number of vertexs
+        F: the number of faces
 
     Args:
-        faces ([numpy int array]): [the faces]
+        faces [numpy int array], [F * 3]: [the faces of the mesh]
     Returns:
         pairs [set]: [the set of point pairs]
     """
@@ -163,15 +174,18 @@ def get_point_pairs(faces):
     return pairs
 
 def split_line(a, b, avg_dist):
-    """[split a line into several points]
+    """Split a long line into several points
+        V: the number of vertexs
+        F: the number of faces
+        M: the number of new points you split
 
     Args:
-        a ([numpy float array]): [the place of point a]
-        b ([numpy float array]): [the place of point b]
-        avg_dist ([float]): [the average dist of lines]
+        a [numpy float array], [3]: [the place of point a]
+        b [numpy float array], [3]: [the place of point b]
+        avg_dist [float]: [the average dist of lines, the function aims at spliting line ab to small sub lines whose lengths are close to it]
 
     Returns:
-        new_points: [numpy float array]: [the place of new points]
+        new_points: [numpy float array], [M * 3]: [the place of new points]
     """
     new_points = [] 
     dist = get_dist(a, b)
@@ -186,16 +200,19 @@ def split_line(a, b, avg_dist):
     return new_points
 
 def split_area(a, b, c, avg_area):
-    """[split a line into several points]
+    """Split the interior of a big triangle into several points
+        V: the number of vertexs
+        F: the number of faces
+        M: the number of new points you split
 
     Args:
-        a ([numpy float array]): [the place of point a]
-        b ([numpy float array]): [the place of point b]
-        c ([numpy float array]): [the place of point c]
-        avg_area ([float]): [the average dist of areas]
+        a [numpy float array], [3]: [the place of point a]
+        b [numpy float array], [3]: [the place of point b]
+        c [numpy float array], [3]: [the place of point c]
+        avg_area [float]: [the average dist of areas, the function aims at spliting triangle abc to small sub triangles whose areas are close to it]
 
     Returns:
-        new_points: [numpy float array]: [the place of new points]
+        new_points: [numpy float array], [M * 3]: [the place of new points]
     """
     new_points = [] 
     area = get_area(a, b, c)
@@ -211,12 +228,12 @@ def split_area(a, b, c, avg_area):
     return new_points
 
 def get_background_pointcloud(base_dir_scannet, base_dir_plane, scene_id):
-    """[get the background pointcloud based on the original info]
+    """Get the dense background pointcloud based on the original mesh, process only one scene
 
     Args:
-        base_dir_scannet ([str]): [the base directory of ScanNet dataset]
-        base_dir_plane ([str]): [the base directory of ScanNet-Planes dataset]
-        scene_id ([str]): [the scene id]
+        base_dir_scannet [string]: [the base directory of ScanNet dataset]
+        base_dir_plane [string]: [the base directory of ScanNet-Planes dataset]
+        scene_id [string]: [the scene id]
     """
     scannet_name_ply = os.path.join(base_dir_scannet, scene_id, 'ply', scene_id + '_vh_clean_2.ply')
     plane_name_ply = os.path.join(base_dir_plane, scene_id + '.ply')
@@ -243,18 +260,18 @@ def get_background_pointcloud(base_dir_scannet, base_dir_plane, scene_id):
         points = split_area(point_a, point_b, point_c, avg_area)
         new_points += points 
     
-    new_points = np.array(new_points, dtype = 'float32')
+    new_points = np.array(new_points, dtype='float32')
     result_vertexs = np.concatenate((vertexs, new_points), axis = 0)
     
-    write_pointcloud_file(save_name_ply, result_vertexs)
+    write_pointcloud(save_name_ply, result_vertexs)
     print('written', save_name_ply)
 
 def main():
-    """[the main function]
+    """The main function
     """
     parser = argparse.ArgumentParser(description = '')
-    parser.add_argument('--base_dir_scannet', default = '/home1/shenguanlin/scannet_mine', type = str)
-    parser.add_argument('--base_dir_plane', default = '/home1/shenguanlin/scannet_planes', type = str)
+    parser.add_argument('--base_dir_scannet', default='/home1/shenguanlin/scannet_mine', type=str)
+    parser.add_argument('--base_dir_plane', default='/home1/shenguanlin/scannet_planes', type=str)
     args = parser.parse_args()
     full_name_list = glob.glob(os.path.join(args.base_dir_plane, '*.ply'))
     for full_name in full_name_list:

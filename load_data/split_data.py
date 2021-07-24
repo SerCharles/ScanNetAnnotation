@@ -1,17 +1,16 @@
-'''
-Used in getting the train and valid datasets
-'''
+"""Scan the entire of our modified ScanNet dataset, deleting invalid and useless data, and split train/valid scenes
+"""
 import argparse
-import numpy as np
 import os
 import glob
 
 def split_train_valid(base_dir, base_dir_plane, whether_clear):
-    """[split the training scenes and validation scenes]
+    """Split the training scenes and validation scenes
+
     Args:
-        base_dir ([str]): [the base directory of my handled scannet dataset]
-        base_dir_plane ([str]): [the base directory of my handled scannet plane dataset]
-        whether_clear ([bool]): [clear useless data or not]
+        base_dir [string]: [the base directory of our modified ScanNet dataset]
+        base_dir_plane [string]: [the base directory of our modified ScanNet-Planes dataset]
+        whether_clear [boolean]: [clear useless data or not]
     """
     train_name = os.path.join(base_dir, 'train.txt')
     valid_name = os.path.join(base_dir, 'valid.txt')
@@ -52,7 +51,7 @@ def split_train_valid(base_dir, base_dir_plane, whether_clear):
             num_layout_seg != num_depth or num_layout_depth != num_depth or num_layout_norm / num_depth != 3 or \
             (not os.path.exists(os.path.join(base_dir_plane, scene_id + '.ply'))) or \
                 (not os.path.exists(os.path.join(base_dir_plane, scene_id + '_full.ply'))):
-            print(scene_id)
+            print(scene_id, 'is invalid')
 
             if whether_clear != 0:
                 try:
@@ -95,12 +94,12 @@ def split_train_valid(base_dir, base_dir_plane, whether_clear):
 
 
 def main():
-    """[main function of data clearing]
+    """The main function of data clearing
     """
-    parser = argparse.ArgumentParser(description = '')
-    parser.add_argument('--base_dir', default = '/home1/shenguanlin/scannet_mine', type = str)
-    parser.add_argument('--base_dir_plane', default = '/home1/shenguanlin/scannet_planes', type = str)
-    parser.add_argument('--clear', default = 0, type = int)
+    parser = argparse.ArgumentParser(descriptio ='')
+    parser.add_argument('--base_dir', default='/home1/shenguanlin/scannet_mine', type=str)
+    parser.add_argument('--base_dir_plane', default='/home1/shenguanlin/scannet_planes', type=str)
+    parser.add_argument('--clear', default=0, type=int)
 
     args = parser.parse_args()
     split_train_valid(args.base_dir, args.base_dir_plane, args.clear)

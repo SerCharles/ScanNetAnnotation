@@ -29,7 +29,7 @@ Fourth, you should modify the ScanNet-Planes data used in further work.
 
 ```
 cd background_annotation
-python modify_plane_data.py
+python get_background_mesh.py
 python get_background_pointcloud.py
 cd ..
 ```

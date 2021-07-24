@@ -1,3 +1,6 @@
+"""The data loading and processing function used in cuda rendering 
+"""
+
 import numpy as np
 import os
 from plyfile import *
@@ -5,11 +8,17 @@ from math import *
 import json
 
 def transform_norm(norm, world2cam):
-    '''
-    description: transform, normalize and set positive the norm
-    parameter: norm, world2cam
-    return: new norm
-    '''
+    """Transform the normals in the world coordinate to a camera's coordinate, normalize it and ensure that it points to the eye
+        V: number of vertexs
+        F: number of faces
+
+    Args:
+        norm [numpy float array], [V * 3]: [the normal in the world coordinate]
+        world2cam [numpy float array], [3 * 3]: [the transform matrix between the world coordinate and the camera coordinate]
+
+    Returns:
+        real_norm [numpy float array], [V * 3]: [the modified norm in the camera coordinate, added by 1 to be saved as pictures]
+    """
     rotate = world2cam[0:3, 0:3]
     norm = np.swapaxes(norm, 0, 1)
     norm_cam = np.dot(rotate, norm)
@@ -21,11 +30,19 @@ def transform_norm(norm, world2cam):
     return real_norm
 
 def load_intrinsic(full_name):
-    '''
-    description: read the intrinsic
-    parameter: full_name
-    return: width, height, fx, fy, cx, cy
-    '''
+    """Load one intrinsic file
+
+    Args:
+        full_name [string]: [the full path of the intrinsic file]
+
+    Returns:
+        width [int]: [the width of the picture]
+        height [int]: [the height of the picture]
+        fx [float]: [the focal length of the x axis, part of the intrinsic]
+        fy [float]: [the focal length of the y axis, part of the intrinsic]
+        cx [float]: [the focal center of the x axis, part of the intrinsic]
+        cy [float]: [the focal center of the y axis, part of the intrinsic]
+    """
     width = 0
     height = 0
     fx = 0.0
@@ -50,11 +67,14 @@ def load_intrinsic(full_name):
     return width, height, fx, fy, cx, cy
 
 def load_pose(full_name):
-    '''
-    description: read the extrinsic
-    parameter: full_name
-    return: numpy array of extrinsic
-    '''
+    """Load one extrinsic file(camera to world)
+
+    Args:
+        full_name [string]: [the full path of the extrinsic file]
+
+    Returns:
+        pose [numpy float array], [4 * 4]: [the extrinsic matrix]
+    """
     pose = np.zeros((4, 4), dtype = np.float32)
     f = open(full_name, 'r')
     lines = f.read().split('\n')
@@ -71,11 +91,18 @@ def load_pose(full_name):
 
 
 def load_simple_ply(model_path):
-    '''
-    description: load the simple ply file with only basic vertex, face info
-    input: model_path
-    return: vertexs, faces, norm, color
-    '''
+    """Load a simple ply file with on point places and faces
+        V: number of vertexs
+        F: number of faces
+
+    Args:
+        model_path [string]: [the full path of the model]
+
+    Returns:
+        vertexs [numpy float array], [V * 3]: [vertexs]
+        faces [numpy int array], [F * 3]: [faces]    
+    """
+
     plydata = PlyData.read(model_path)
     my_vertexs = []
     my_faces = []
@@ -94,18 +121,25 @@ def load_simple_ply(model_path):
         c = int(faces[i][0][2])
         my_faces.append([a, b, c])
     
-    F = np.array(my_faces, dtype = 'int32')
-    V = np.array(my_vertexs, dtype = 'float32')
-
-    return V, F
+    vertexs = np.array(my_vertexs, dtype='float32')
+    faces = np.array(my_faces, dtype='int32')
+    return vertexs, faces
 
 
 def load_ply(model_path):
-    '''
-    description: load the zipped ply file with only points with color, vertexs, and normal
-    input: model_path
-    return: vertexs, faces, norm, color
-    '''
+    """Load the ply file with points with normal and color, and faces
+        V: number of vertexs
+        F: number of faces
+
+    Args:
+        model_path [string]: [the full path of the model]
+
+    Returns:
+        vertexs [numpy float array], [V * 3]: [vertexs]
+        faces [numpy int array], [F * 3]: [faces]
+        norms [numpy float array], [V * 3]: [norms of each vertex]
+        colors [numpy float array], [V * 3]: [colors of each vertex, divided by 256]
+    """
     plydata = PlyData.read(model_path)
     my_vertexs = []
     my_norms = []
@@ -136,29 +170,28 @@ def load_ply(model_path):
         c = int(faces[i][0][2])
         my_faces.append([a, b, c])
     
-    F = np.array(my_faces, dtype = 'int32')
-    V = np.array(my_vertexs, dtype = 'float32')
-    C = np.array(my_colors, dtype = 'float32')
-    NORM = np.nan_to_num(np.array(my_norms, dtype = 'float32'))
-
-    return V, F, NORM, C
+    vertexs = np.array(my_vertexs, dtype='float32')
+    faces = np.array(my_faces, dtype='int32')
+    norms = np.nan_to_num(np.array(my_norms, dtype='float32'))
+    colors = np.array(my_colors, dtype='float32')
+    return vertexs, faces, norms, colors
 
 
 
 def load_planes(base_dir, scene_id):
-    """[load the ScanNet-Planes dataset]
+    """Load the ScanNet-Planes dataset
+        V: number of vertexs
+        F: number of faces
 
     Args:
-        base_dir ([str]): [the base directory of ScanNet-Planes dataset]
-        scene_id ([str]): [the scene id]
+        base_dir [string]: [the base directory of ScanNet-Planes dataset]
+        scene_id [string]: [the scene id]
     
-
     Returns:
-        V [float32 numpy array]: [vertexs]
-        F [int32 numpy array]: [faces]
-        NORM [float32 numpy array]: [norms of each face]
-        L [int32 numpy array]: [labels of each face]
-
+        vertexs [numpy float array], [V * 3]: [vertexs]
+        faces [numpy int array], [F * 3]: [faces]
+        norms [numpy float array], [F * 3]: [norms of each face]
+        labels [numpy int array], [F * 1]: [labels of each face]
     """
 
     full_name_ply = os.path.join(base_dir, scene_id + '.ply')
@@ -186,68 +219,13 @@ def load_planes(base_dir, scene_id):
         c = int(words[3])
         face = [a, b, c]
         faces.append(face)
-    with open(full_name_info, 'r', encoding = 'utf8')as fp:
+    with open(full_name_info, 'r', encoding='utf8')as fp:
         data = json.load(fp)
     norms = data['norms']
     labels = data['labels']
-    F = np.array(faces, dtype = 'int32')
-    V = np.array(vertexs, dtype = 'float32')
-    L = np.array(labels, dtype = 'int32')
-    NORM = np.nan_to_num(np.array(norms, dtype = 'float32'))
 
-    return V, F, NORM, L
-
-
-
-
-def get_seg_label(base_dir, scene_id, vertexs, faces):
-    """[get the segmentation label of the model]
-
-    Args:
-        base_dir ([str]): [the base dir of the ScanNet dataset]
-        scene_id ([str]): [the scene id ]
-        vertexs ([ply vertexs]): [vertexs info generated by plyfile]
-        faces ([ply faces]): [faces info generated by plyfile]
-
-    Returns:
-        face labels [boolean array]: [whether the face is background, True is yes, False is no]
-    """
-
-    background_labels = ['ceiling', 'floor', 'wall']
-    instance_descriptor_name = os.path.join(base_dir, scene_id, 'ply', scene_id + '_vh_clean.aggregation.json') 
-    vertex_info_name = os.path.join(base_dir, scene_id, 'ply', scene_id + '_vh_clean_2.0.010000.segs.json')
-
-    with open(instance_descriptor_name, 'r', encoding = 'utf8')as fp:
-        instance_info = json.load(fp)
-    instances = instance_info['segGroups']
-
-    with open(vertex_info_name, 'r', encoding = 'utf8')as fp:
-        vertex_info_total = json.load(fp)
-        vertex_info = vertex_info_total['segIndices']
-
-    vertex_label = []
-    face_label = []
-
-    for i in range(len(vertexs)):
-        vertex_label.append(False)
-    for i in range(len(faces)):
-        face_label.append(False)
-
-    for i in range(len(vertexs)):
-        representative = int(vertex_info[i])
-        for instance in instances:
-            segments = instance['segments']
-            label = instance['label']
-            if representative in segments:
-                if label in background_labels:
-                    vertex_label[i] = True
-                break 
-    
-    for i in range(len(faces)):
-        a = int(faces[i][0])
-        b = int(faces[i][1])
-        c = int(faces[i][2])
-        if vertex_label[a] == True and vertex_label[b] == True and vertex_label[c] == True:
-            face_label[i] = True
-
-    return face_label
+    vertexs = np.array(vertexs, dtype='float32')
+    faces = np.array(faces, dtype='int32')
+    norms = np.nan_to_num(np.array(norms, dtype='float32'))
+    labels = np.array(labels, dtype='int32')
+    return vertexs, faces, norms, labels

@@ -12,7 +12,11 @@ import PIL.Image as Image
 
 def render_one_scene(base_dir_scannet, base_dir_plane, scene_id):
     """Render the layout norm, seg, depth of one scene
-
+        H: the height of the picture
+        W: the width of the picture
+        V: the number of vertexs
+        F: the number of faces
+        
     Args:
         base_dir_scannet [string]: [the base directory of our modified ScanNet dataset]
         base_dir_plane [string]: [the base directory of the base directory of our modified ScanNet-Planes dataset]

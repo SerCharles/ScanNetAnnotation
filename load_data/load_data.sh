@@ -1,3 +1,5 @@
+#Load the 2D ScanNet data from the .sens of it, and remove useless data, leaving only 1/10 of them
+
 scannet_code=/home/shenguanlin/ScanNet
 base_code=/home/shenguanlin/ScanNetAnnotation/load_data
 base_source=/data/sgl/scannet/scans
