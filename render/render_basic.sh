@@ -1,3 +1,4 @@
+#Render the basic info of depth and norms of our ScanNet Dataset
 
 base_code=/home/shenguanlin/ScanNetAnnotation/render
 base_data=/home1/shenguanlin/scannet_mine
