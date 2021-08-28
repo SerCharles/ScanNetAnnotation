@@ -21,6 +21,9 @@ def render_one_scene(base_dir, scene_id):
         base_dir [string]: [the base directory of our modified ScanNet dataset]
         scene_id [string]: [the scene id]
     """
+    save_dir = os.path.join(base_dir, scene_id, 'color')
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
     save_dir = os.path.join(base_dir, scene_id, 'norm')
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
