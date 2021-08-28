@@ -77,20 +77,27 @@ def render_one_scene(base_dir, scene_id):
         final_norm = (final_norm * 32768).astype(np.uint16)
         final_color = (final_color * 256).astype(np.uint8)
 
+        result_name_color = scene_id + '_' + str(id) + '.jpg'
         result_name_depth = scene_id + '_' + str(id) + '.png'  
         result_name_nx = scene_id + '_' + str(id) + '_nx.png'  
         result_name_ny = scene_id + '_' + str(id) + '_ny.png'  
         result_name_nz = scene_id + '_' + str(id) + '_nz.png'  
 
+        full_result_name_color = os.path.join(base_dir, scene_id, 'color', result_name_color)
         full_result_name_depth = os.path.join(base_dir, scene_id, 'new_depth', result_name_depth)
         full_result_name_nx = os.path.join(base_dir, scene_id, 'norm', result_name_nx)
         full_result_name_ny = os.path.join(base_dir, scene_id, 'norm', result_name_ny)
         full_result_name_nz = os.path.join(base_dir, scene_id, 'norm', result_name_nz)
         
+        '''
+        picture_color = Image.fromarray(final_color)
+        picture_color.save(full_result_name_color)
+        print('written', full_result_name_color)
+        '''
+        
         picture_depth = Image.fromarray(final_depth)
         picture_depth.save(full_result_name_depth)
         print('written', full_result_name_depth)
-
 
         final_nx = final_norm[:, :, 0]
         picture_nx = Image.fromarray(final_nx)
