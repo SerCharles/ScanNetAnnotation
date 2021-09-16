@@ -85,16 +85,46 @@ def load_data(base_dir, scene_id, id):
     Return:
         intrinsic [numpy float array], [3 * 3]: [the intrinsic of the picture]
         extrinsic [numpy float array], [4 * 4]: [the extrinsic of the picture]
-        layout_seg [numpy float array], [H * W]: [the layout segmentation label of the picture]
+        layout_seg [numpy int array], [H * W]: [the layout segmentation label of the picture]
     """
     base_name = scene_id + '_' + str(id)
-    intrinsic_name = os.path.join(base_dir, '_info.txt')
-    extrinsic_name = os.path.join(base_dir, 'pose', base_name + ".txt")
-    layout_seg_name = os.path.join(base_dir, 'layout_seg', base_name + '.png')
+    intrinsic_name = os.path.join(base_dir, scene_id, '_info.txt')
+    extrinsic_name = os.path.join(base_dir, scene_id, 'pose', base_name + ".txt")
+    layout_seg_name = os.path.join(base_dir, scene_id, 'layout_seg', base_name + '.png')
     intrinsic = load_intrinsic(intrinsic_name)
     extrinsic = load_extrinsic(extrinsic_name)
-    layout_seg = load_image(layout_seg_name)
+    layout_seg = load_image(layout_seg_name).astype(np.int)
     
     return intrinsic, extrinsic, layout_seg
 
 
+def visualize_annotation_result(layout_seg, whether_ceilings, whether_floors, whether_walls, ceiling_places, floor_places):
+    """Visualize the annotation result
+
+    Args:
+        layout_seg [numpy int array], [H * W]: [the layout segmentation of the picture]
+        whether_ceilings [numpy boolean array], [(2 * W)]: [whether the lines have ceiling]
+        whether_floors [numpy boolean array], [(2 * W)]: [whether the lines have floor]
+        whether_walls [numpy boolean array], [(2 * W)]: [whether the lines have wall]
+        ceiling_places [numpy float array], [2 * (2 * W)]: [the ceiling place of each line, (y, x)]
+        floor_places [numpy float array], [2 * (2 * W)]: [the floor place of each line, (y, x)]
+    """
+    H, W = layout_seg.shape
+    final_color = layout_seg * 3000
+    #np.zeros((H, W), dtype=np.uint16)
+    #
+    for i in range(2 * W):
+        if whether_ceilings[i] == True:
+            y = int(ceiling_places[0, i])
+            x = int(ceiling_places[1, i])
+            if x >= 0 and x < W and y >= 0 and y < H:
+                final_color[y, x] = 65535
+        if whether_floors[i] == True:
+            y = int(floor_places[0, i])
+            x = int(floor_places[1, i])
+            if x >= 0 and x < W and y >= 0 and y < H:
+                final_color[y, x] = 65535
+    final_color = final_color.astype(np.uint16)
+    picture = Image.fromarray(final_color)
+    picture.save('/home/shenguanlin/test.png')
+         
