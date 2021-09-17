@@ -31,6 +31,7 @@ def annotation_one_picture(base_dir, save_dir, scene_id, id):
     print(end - start)
     full_save_dir = os.path.join(save_dir, scene_id + "_" + str(id) + '.png')
     data_utils.visualize_annotation_result(full_save_dir, layout_seg, lines, whether_ceilings, whether_floors, whether_walls, whether_boundaries, ceiling_places, floor_places)
+    return end - start
 
 def annotation_one_scene(base_dir, scene_id):
     """Annotate one scene
@@ -48,8 +49,14 @@ def annotation_one_scene(base_dir, scene_id):
         file_name = full_name.split(os.sep)[-1]
         id = int(file_name[:-4].split('_')[-1])
         id_list.append(id)
+        
+    total_time = 0.0
     for id in id_list:
-        annotation_one_picture(base_dir, save_dir, scene_id, id)
+        dtime = annotation_one_picture(base_dir, save_dir, scene_id, id)
+        total_time += dtime 
+    avg_time = total_time / len(id_list)
+    print('total time is', total_time, 's')
+    print('average time is', avg_time, 's')
 
 def main():
     """The main function of vanishing point annotation

@@ -184,7 +184,7 @@ def get_wall_boundaries(layout_seg, lines, ceiling_id, floor_id):
 
     for i in range(len(boundaries)):
         boundary = boundaries[i]
-        if len(boundary) > (H / 10):
+        if len(boundary) > (H / 50):
             np_boundary = np.array(boundary)
             y = np_boundary[:, 0].reshape(-1, 1)
             x = np_boundary[:, 1]
@@ -204,7 +204,7 @@ def get_wall_boundaries(layout_seg, lines, ceiling_id, floor_id):
                 if dist < min_distance:
                     min_distance = dist 
                     best_id = j 
-            if best_id >= 0 and best_id < W:
+            if best_id >= 0 and best_id < W and min_distance < 15.0:
                 whether_boundaries[best_id] = True 
             
 
@@ -219,7 +219,7 @@ def get_wall_boundaries(layout_seg, lines, ceiling_id, floor_id):
                 if dist < min_distance:
                     min_distance = dist 
                     best_id = j 
-            if best_id >= 0 and best_id < W:
+            if best_id >= 0 and best_id < W and min_distance < 15.0:
                 whether_boundaries[best_id + W] = True   
 
     return whether_boundaries
