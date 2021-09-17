@@ -98,14 +98,17 @@ def load_data(base_dir, scene_id, id):
     return intrinsic, extrinsic, layout_seg
 
 
-def visualize_annotation_result(layout_seg, whether_ceilings, whether_floors, whether_walls, ceiling_places, floor_places):
+def visualize_annotation_result(full_save_dir, layout_seg, lines, whether_ceilings, whether_floors, whether_walls, whether_boundaries, ceiling_places, floor_places):
     """Visualize the annotation result
 
     Args:
+        full_save_dir [string]: [the full place to save the picture]
         layout_seg [numpy int array], [H * W]: [the layout segmentation of the picture]
+        lines [float array], [(2 * W) * 2]: [the sampled lines, the four instances are top_x, bottom_x]
         whether_ceilings [numpy boolean array], [(2 * W)]: [whether the lines have ceiling]
         whether_floors [numpy boolean array], [(2 * W)]: [whether the lines have floor]
         whether_walls [numpy boolean array], [(2 * W)]: [whether the lines have wall]
+        whether_boundaries [numpy boolean array], [(2 * W)]: [whether the lines are wall-wall boundaries]
         ceiling_places [numpy float array], [2 * (2 * W)]: [the ceiling place of each line, (y, x)]
         floor_places [numpy float array], [2 * (2 * W)]: [the floor place of each line, (y, x)]
     """
@@ -124,7 +127,29 @@ def visualize_annotation_result(layout_seg, whether_ceilings, whether_floors, wh
             x = int(floor_places[1, i])
             if x >= 0 and x < W and y >= 0 and y < H:
                 final_color[y, x] = 65535
+
+    for i in range(len(lines)):
+        if whether_boundaries[i] != True:
+            continue
+        line = lines[i]
+        top_x, bottom_x = line 
+        top_y = 0.0
+        bottom_y = H - 1 + 0.0
+        dy = 1.0
+        dx = (bottom_x - top_x) / bottom_y 
+        current_x = top_x 
+        current_y = top_y
+        for j in range(H):
+            axis_x = int(current_x)
+            axis_y = int(current_y)
+            if axis_x >= 0 and axis_x < W and axis_y >= 0 and axis_y < H and layout_seg[axis_y, axis_x] > 0:
+                final_color[axis_y, axis_x] = 65535
+            current_y += dy
+            current_x += dx 
+
+
     final_color = final_color.astype(np.uint16)
     picture = Image.fromarray(final_color)
-    picture.save('/home/shenguanlin/test.png')
+    picture.save(full_save_dir)
+    
          

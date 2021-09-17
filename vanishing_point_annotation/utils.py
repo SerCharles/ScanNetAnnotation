@@ -1,8 +1,9 @@
 """The mathematics util functions of vanishing point annotation
 """
 import os
+from math import *
 import numpy as np
-
+from sklearn.linear_model import LinearRegression
 
 
 def get_vanishing_point(H, W, intrinsic, extrinsic):
@@ -148,9 +149,78 @@ def get_ceiling_and_floor(layout_seg, lines, ceiling_id, floor_id):
 
 
 
-def get_wall_boundaries(layout_seg):
+def get_wall_boundaries(layout_seg, lines, ceiling_id, floor_id):
     """Get the wall-wall boundaries 
 
     Args:
-        layout_seg ([type]): [description]
+        layout_seg [numpy int array], [H * W]: [the layout segmentation of the picture]
+        lines [float array], [(2 * W) * 2]: [the sampled lines, the four instances are top_x, bottom_x]
+        ceiling_id [int]: [the id of the plane which is the ceiling]
+        floor_id [int]: [the id of the plane which is the floor]
+
+    Return:
+        whether_boundaries [numpy boolean array], [(2 * W)]: [whether the lines are wall-wall boundaries]
     """
+    H, W =  layout_seg.shape
+    whether_boundaries = np.zeros((2 * W), dtype=np.bool)
+
+    max_id = np.max(layout_seg)
+    boundaries = []
+    for i in range((max_id + 1) ** 2):
+        boundaries.append([])
+
+    for y in range(H):
+        for x in range(W - 1):
+            left_seg = 0
+            right_seg = 0
+            if layout_seg[y, x] > 0 and layout_seg[y, x] != ceiling_id and layout_seg[y, x] != floor_id:
+                left_seg = layout_seg[y, x]
+            if layout_seg[y, x + 1] > 0 and layout_seg[y, x + 1] != ceiling_id and layout_seg[y, x + 1] != floor_id:
+                right_seg = layout_seg[y, x + 1]
+            if left_seg > 0 and right_seg > 0 and left_seg != right_seg:
+                seg = left_seg * (max_id + 1) + right_seg
+                boundaries[seg].append([y, x])
+    
+
+    for i in range(len(boundaries)):
+        boundary = boundaries[i]
+        if len(boundary) > (H / 10):
+            np_boundary = np.array(boundary)
+            y = np_boundary[:, 0].reshape(-1, 1)
+            x = np_boundary[:, 1]
+            reg = LinearRegression().fit(y, x)
+            k = reg.coef_[0]
+            b = reg.intercept_ #ky - x + b = 0
+
+            min_distance = sqrt(W ** 2 + H ** 2)
+            best_id = -1
+
+            for j in range(W):
+                line = lines[j]
+                top_x, bottom_x = line 
+                dist_top = abs((k * 0.0 - top_x + b) / sqrt(k ** 2 + 1))
+                dist_bottom = abs((k * (H - 1) - bottom_x + b) / sqrt(k ** 2 + 1))
+                dist = (dist_top + dist_bottom) / 2
+                if dist < min_distance:
+                    min_distance = dist 
+                    best_id = j 
+            if best_id >= 0 and best_id < W:
+                whether_boundaries[best_id] = True 
+            
+
+            min_distance = sqrt(W ** 2 + H ** 2)
+            best_id = -1
+            for j in range(W):
+                line = lines[j + W]
+                top_x, bottom_x = line 
+                dist_top = abs((k * 0.0 - top_x + b) / sqrt(k ** 2 + 1))
+                dist_bottom = abs((k * (H - 1) - bottom_x + b) / sqrt(k ** 2 + 1))
+                dist = (dist_top + dist_bottom) / 2
+                if dist < min_distance:
+                    min_distance = dist 
+                    best_id = j 
+            if best_id >= 0 and best_id < W:
+                whether_boundaries[best_id + W] = True   
+
+    return whether_boundaries
+
