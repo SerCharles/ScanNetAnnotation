@@ -149,6 +149,8 @@ def get_ceiling_and_floor(layout_seg, lines, ceiling_id, floor_id):
 
 
 
+
+
 def get_wall_boundaries(layout_seg, lines, ceiling_id, floor_id):
     """Get the wall-wall boundaries 
 
@@ -161,27 +163,40 @@ def get_wall_boundaries(layout_seg, lines, ceiling_id, floor_id):
     Return:
         whether_boundaries [numpy boolean array], [(2 * W)]: [whether the lines are wall-wall boundaries]
     """
-    H, W =  layout_seg.shape
-    whether_boundaries = np.zeros((2 * W), dtype=np.bool)
+    H, W = layout_seg.shape
+    layout_seg_left = layout_seg[:, 0:W - 1]
+    layout_seg_right = layout_seg[:, 1:W]
+    zeros = np.zeros((H, 1), dtype=np.bool)
+    
+    whether_boundary = (layout_seg_left > 0) & (layout_seg_left != ceiling_id) & (layout_seg_left != floor_id) & \
+        (layout_seg_right > 0) & (layout_seg_right != ceiling_id) & (layout_seg_right != floor_id) & (layout_seg_left != layout_seg_right)
+    whether_boundary = np.concatenate((whether_boundary, zeros), axis=1)
 
+    x_indices, y_indices = np.meshgrid(np.array([ii for ii in range(W)]), np.array([ii for ii in range(H)]))
+
+    y_indices = y_indices.reshape(H * W)
+    x_indices = x_indices.reshape(H * W)
+    whether_boundary = whether_boundary.reshape(H * W)
+    boundary_y = y_indices[whether_boundary]
+    boundary_x = x_indices[whether_boundary]
+    num_boundary = boundary_y.shape[0]
+    
+    
+    whether_boundaries = np.zeros((2 * W), dtype=np.bool)
     max_id = np.max(layout_seg)
     boundaries = []
     for i in range((max_id + 1) ** 2):
         boundaries.append([])
-
-    for y in range(H):
-        for x in range(W - 1):
-            left_seg = 0
-            right_seg = 0
-            if layout_seg[y, x] > 0 and layout_seg[y, x] != ceiling_id and layout_seg[y, x] != floor_id:
-                left_seg = layout_seg[y, x]
-            if layout_seg[y, x + 1] > 0 and layout_seg[y, x + 1] != ceiling_id and layout_seg[y, x + 1] != floor_id:
-                right_seg = layout_seg[y, x + 1]
-            if left_seg > 0 and right_seg > 0 and left_seg != right_seg:
-                seg = left_seg * (max_id + 1) + right_seg
-                boundaries[seg].append([y, x])
     
-
+    for i in range(num_boundary):
+        by = int(boundary_y[i])
+        bx = int(boundary_x[i])
+        left_seg = layout_seg[by, bx]
+        right_seg = layout_seg[by, bx + 1]
+        seg = left_seg * (max_id + 1) + right_seg
+        boundaries[seg].append([by, bx])
+    
+        
     for i in range(len(boundaries)):
         boundary = boundaries[i]
         if len(boundary) > (H / 50):
@@ -223,4 +238,3 @@ def get_wall_boundaries(layout_seg, lines, ceiling_id, floor_id):
                 whether_boundaries[best_id + W] = True   
 
     return whether_boundaries
-
