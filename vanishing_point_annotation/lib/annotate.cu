@@ -7,154 +7,183 @@ __constant__ int height; // the height of the picture
 __constant__ int width; // the width of the picture
 __constant__ int floor_label;  //the label of the floor in the layout segmentation
 __constant__ int ceiling_label; //the label of the ceiling in the layout segmentation
-__constant__ float vanishing_y, vanishing_x; //the place of the vanishing point
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#define MAX(a,b) (((a)>(b))?(a):(b))
 
-__host__ __device__ static
-double calculateSignedArea2(const glm::dvec3& a, const glm::dvec3& b, const glm::dvec3& c) {
-	return ((c.x - a.x) * (b.y - a.y) - (b.x - a.x) * (c.y - a.y));
+
+
+__global__ void Annotate_gpu(float* line_bottom_x, float* line_top_x, int* layout_seg, 
+bool* whether_ceilings, bool* whether_walls, bool* whether_floors, float* ceilings_y, float* ceilings_x, float* floors_y, float* floors_x)
+/*The cuda function of annotating one line
+    Args:
+        line_bottom_x [cuda float array], [2 * W]: [the bottom x of the 2W lines]
+        line_top_x [cuda float array], [2 * W]: [the top x of the 2W lines]
+        layout_seg [cuda int array], [H * W]: [the layout segmentation of the picture]
+
+    Returns:
+        whether_ceilings [cuda boolean array], [2 * W]: [whether the lines have ceiling]
+        whether_walls [cuda boolean array], [2 * W]: [whether the lines have wall]
+        whether_floors [cuda boolean array], [2 * W]: [whether the lines have floor]
+        ceilings_y [cuda float array], [2 * W]: [the ceiling y place of each line]
+        ceilings_x [cuda float array], [2 * W]: [the ceiling x place of each line]
+        floors_y [cuda float array], [2 * W]: [the floor y place of each line]
+        floors_x [cuda float array], [2 * W]: [the floor x place of each line]
+*/
+{
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+	if (i >= 2 * width)
+		return;
+
+    float top_x = line_top_x[i];
+    float top_y = 0.0;
+    float bottom_x = line_bottom_x[i];
+    float bottom_y = 0.0;
+    float dy = 1.0;
+    float dx = (bottom_x - top_x) / bottom_y;
+    bool whether_ceiling = 0;
+    bool whether_wall = 0;
+    bool whether_floor = 0;
+    float ceiling_x = top_x;
+    float ceiling_y = top_y;
+    float floor_x = bottom_x;
+    float floor_y = bottom_y;
+    float current_x = top_x;
+    float current_y = top_y;
+
+    for(int j = 0; j < height; j ++)
+    {
+        int axis_x = (int)current_x;
+        int axis_y = (int)current_y;
+        if(axis_x < 0 || axis_x >= width || axis_y < 0 || axis_y >= height || layout_seg[axis_y * width + axis_x] <= 0)
+        {
+
+        }
+        else if(layout_seg[axis_y * width + axis_x] == ceiling_label)
+        {
+            whether_ceiling = 1;
+            if(current_y > ceiling_y)
+            {
+                ceiling_x = current_x;
+                ceiling_y = current_y;
+            }
+        }
+        else if(layout_seg[axis_y * width + axis_x] == floor_label)
+        {
+            whether_floor = 1;
+            if(current_y < floor_y)
+            {
+                floor_x = current_x;
+                floor_y = current_y;
+            }
+        }
+        else
+        {
+            whether_wall = 1;
+        }
+        current_x += dx;
+        current_y += dy;
+    }
+
+    whether_ceilings[i] = whether_ceiling;
+    whether_floors[i] = whether_floor;
+    whether_walls[i] = whether_wall;
+    ceilings_y[i] = ceiling_y;
+    ceilings_x[i] = ceiling_x;
+    floors_y[i] = floor_y;
+    floors_x[i] = floor_x;    
 }
 
+void Annotate(int H, int W, int floor_id, int ceiling_id, float* line_bottom_x, float* line_top_x, int* layout_seg, 
+bool* whether_ceilings, bool* whether_walls, bool* whether_floors, float* ceilings_y, float* ceilings_x, float* floors_y, float* floors_x)
+/*The main function of annotating lines
+    Args:
+        H [int]: the height of the picture
+        W [int]: [the width of the picture]
+        floor_id [int]: [the id of the plane which is the floor]
+        ceiling_id [int]: [the id of the plane which is the ceiling]
+        line_bottom_x [float array], [2 * W]: [the bottom x of the 2W lines]
+        line_top_x [float array], [2 * W]: [the top x of the 2W lines]
+        layout_seg [int array], [H * W]: [the layout segmentation of the picture]
 
+    Returns:
+        whether_ceilings [boolean array], [2 * W]: [whether the lines have ceiling]
+        whether_walls [boolean array], [2 * W]: [whether the lines have wall]
+        whether_floors [boolean array], [2 * W]: [whether the lines have floor]
+        ceilings_y [float array], [2 * W]: [the ceiling y place of each line]
+        ceilings_x [float array], [2 * W]: [the ceiling x place of each line]
+        floors_y [float array], [2 * W]: [the floor y place of each line]
+        floors_x [float array], [2 * W]: [the floor x place of each line]
+*/
+{
+    //init cuda memory
+    cudaMemcpyToSymbol(height, &H, sizeof(int), 0, cudaMemcpyHostToDevice);
+    cudaMemcpyToSymbol(width, &W, sizeof(int), 0, cudaMemcpyHostToDevice);
+    cudaMemcpyToSymbol(floor_label, &floor_id, sizeof(int), 0, cudaMemcpyHostToDevice);
+    cudaMemcpyToSymbol(ceiling_label, &ceiling_id, sizeof(int), 0, cudaMemcpyHostToDevice);
 
-
-
-
-
-
-__global__ void Render_gpu(glm::vec3* positions, glm::ivec3* indices, int* color, int* findices, int* zbuffer) {
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-	if (idx >= num_primitives)
-		return;
-
-	glm::ivec3 face = indices[idx];
-	glm::dvec3 p1 = glm::dvec3(rotation * positions[face[0]] + translation);
-	glm::dvec3 p2 = glm::dvec3(rotation * positions[face[1]] + translation);
-	glm::dvec3 p3 = glm::dvec3(rotation * positions[face[2]] + translation);
-
-	glm::dvec3 p1_original = p1;
-	glm::dvec3 p2_original = p2;
-	glm::dvec3 p3_original = p3;
-
-
-	//如果三个端点深度都是负数，那么一定不可见--剪枝。之前或逻辑并不对
-	/*if (p1.z < 0.0001 || p2.z < 0.0001 || p3.z < 0.0001)
-	{
-		return;
-	}*/
-	//改变了剪枝逻辑
-	if (p1.z < 0.0001 && p2.z < 0.0001 && p3.z < 0.0001)
-	{
-		return;
-	}
-
-	p1.z = 1.0f / p1.z;
-	p2.z = 1.0f / p2.z;
-	p3.z = 1.0f / p3.z;
-
-	p1.x = p1.x * p1.z;
-	p1.y = p1.y * p1.z;
-	p2.x = p2.x * p2.z;
-	p2.y = p2.y * p2.z;
-	p3.x = p3.x * p3.z;
-	p3.y = p3.y * p3.z;
-
-	//这段代码不对：虽然X，Y是凸的，但是这里的值实际上是X/Z，Y/Z不是凸的，因此这样找min max不对（当然稠密mesh这样近似是对的）
-	/*int minX = (MIN(p1.x, MIN(p2.x, p3.x)) * fx + cx);
-	int minY = (MIN(p1.y, MIN(p2.y, p3.y)) * fy + cy);
-	int maxX = (MAX(p1.x, MAX(p2.x, p3.x)) * fx + cx) + 0.999999f;
-	int maxY = (MAX(p1.y, MAX(p2.y, p3.y)) * fy + cy) + 0.999999f;
-
-	minX = MAX(0, minX);
-	minY = MAX(0, minY);
-	maxX = MIN(width, maxX);
-	maxY = MIN(height, maxY);
-	*/
-
-	//改进了最小-最大值的求法：如果三个z都是正的就正常来，否则就遍历全局即可
+	float* line_bottom_x_gpu;
+	cudaMalloc((void**)&line_bottom_x_gpu, 2 * W * sizeof(float));
+    cudaMemcpy((void*)line_bottom_x_gpu, (void*)line_bottom_x, 2 * W * sizeof(float), cudaMemcpyHostToDevice);
 	
-	int minX = 0;
-	int minY = 0;
-	int maxX = width; 
-	int maxY = height;
-	if(p1.z > 0.0001 && p2.z > 0.0001 && p3.z > 0.0001)
-	{
-		minX = (MIN(p1.x, MIN(p2.x, p3.x)) * fx + cx);
-		minY = (MIN(p1.y, MIN(p2.y, p3.y)) * fy + cy);
-		maxX = (MAX(p1.x, MAX(p2.x, p3.x)) * fx + cx) + 0.999999f;
-		maxY = (MAX(p1.y, MAX(p2.y, p3.y)) * fy + cy) + 0.999999f;
-	
-		minX = MAX(0, minX);
-		minY = MAX(0, minY);
-		maxX = MIN(width, maxX);
-		maxY = MIN(height, maxY);
-	}
+    float* line_top_x_gpu;
+	cudaMalloc((void**)&line_top_x_gpu, 2 * W * sizeof(float));
+    cudaMemcpy((void*)line_top_x_gpu, (void*)line_top_x, 2 * W * sizeof(float), cudaMemcpyHostToDevice);
+
+    int* layout_seg_gpu;
+	cudaMalloc((void**)&layout_seg_gpu, H * W * sizeof(int));
+    cudaMemcpy((void*)layout_seg_gpu, (void*)layout_seg, H * W * sizeof(int), cudaMemcpyHostToDevice);
+
+    bool* whether_ceilings_gpu;
+    cudaMalloc((void**)&whether_ceilings_gpu, 2 * W * sizeof(bool));
+    cudaMemcpy((void*)whether_ceilings_gpu, (void*)whether_ceilings, 2 * W * sizeof(bool), cudaMemcpyHostToDevice);
+
+    bool* whether_walls_gpu;
+    cudaMalloc((void**)&whether_walls_gpu, 2 * W * sizeof(bool));
+    cudaMemcpy((void*)whether_walls_gpu, (void*)whether_walls, 2 * W * sizeof(bool), cudaMemcpyHostToDevice);
+
+    bool* whether_floors_gpu;
+    cudaMalloc((void**)&whether_floors_gpu, 2 * W * sizeof(bool));
+    cudaMemcpy((void*)whether_floors_gpu, (void*)whether_floors, 2 * W * sizeof(bool), cudaMemcpyHostToDevice);
+
+	float* ceilings_y_gpu;
+	cudaMalloc((void**)&ceilings_y_gpu, 2 * W * sizeof(float));
+    cudaMemcpy((void*)ceilings_y_gpu, (void*)ceilings_y, 2 * W * sizeof(float), cudaMemcpyHostToDevice);
+
+	float* ceilings_x_gpu;
+	cudaMalloc((void**)&ceilings_x_gpu, 2 * W * sizeof(float));
+    cudaMemcpy((void*)ceilings_x_gpu, (void*)ceilings_x, 2 * W * sizeof(float), cudaMemcpyHostToDevice);
+
+	float* floors_y_gpu;
+	cudaMalloc((void**)&floors_y_gpu, 2 * W * sizeof(float));
+    cudaMemcpy((void*)floors_y_gpu, (void*)floors_y, 2 * W * sizeof(float), cudaMemcpyHostToDevice);
+
+	float* floors_x_gpu;
+	cudaMalloc((void**)&floors_x_gpu, 2 * W * sizeof(float));
+    cudaMemcpy((void*)floors_x_gpu, (void*)floors_x, 2 * W * sizeof(float), cudaMemcpyHostToDevice);
 
 
+    //main function
+    Annotate_gpu<<<(2 * W + 255)/ 256 ,256>>>(line_bottom_x_gpu, line_top_x_gpu, layout_seg_gpu, 
+    whether_ceilings_gpu, whether_walls_gpu, whether_floors_gpu, ceilings_y_gpu, ceilings_x_gpu, floors_y_gpu, floors_x_gpu);
+    cudaDeviceSynchronize();
 
+    //move cuda data back to the main data
+	cudaMemcpy((void*)whether_ceilings, (void*)whether_ceilings_gpu, 2 * W * sizeof(bool), cudaMemcpyDeviceToHost);
+	cudaFree(whether_ceilings_gpu);
 
+	cudaMemcpy((void*)whether_walls, (void*)whether_walls_gpu, 2 * W * sizeof(bool), cudaMemcpyDeviceToHost);
+	cudaFree(whether_walls_gpu);
 
-	
-	for (int py = minY; py <= maxY; ++py) {
-		for (int px = minX; px <= maxX; ++px) {
-			if (px < 0 || px >= width || py < 0 || py >= height)
-				continue;
+	cudaMemcpy((void*)whether_floors, (void*)whether_floors_gpu, 2 * W * sizeof(bool), cudaMemcpyDeviceToHost);
+	cudaFree(whether_floors_gpu);
 
-			float x = (px - cx) / fx;
-			float y = (py - cy) / fy;
+    cudaMemcpy((void*)ceilings_y, (void*)ceilings_y_gpu, 2 * W * sizeof(float), cudaMemcpyDeviceToHost);
+	cudaFree(ceilings_y_gpu);
 
-			glm::dvec3 baryCentricCoordinate = calculateBarycentricCoordinate(p1, p2, p3, glm::dvec3(x, y, 0));
+    cudaMemcpy((void*)ceilings_x, (void*)ceilings_x_gpu, 2 * W * sizeof(float), cudaMemcpyDeviceToHost);
+	cudaFree(ceilings_x_gpu);
 
-			//这里也不对：X/Z Y/Z不在范围内不等于X,Y,Z实际不在范围内，我选择求出来然后反推
-			//if (isBarycentricCoordInBounds(baryCentricCoordinate)) {
-			int pixel = py * width + px;
+    cudaMemcpy((void*)floors_y, (void*)floors_y_gpu, 2 * W * sizeof(float), cudaMemcpyDeviceToHost);
+	cudaFree(floors_y_gpu);
 
-			float inv_z = getZAtCoordinate(baryCentricCoordinate, p1, p2, p3);
-			if(inv_z <= 0)
-			{
-				continue;
-			}
-			float real_x = x / inv_z;
-			float real_y = y / inv_z;
-			glm::dvec3 real_coordinate = calculateBarycentricCoordinate(p1_original, p2_original, p3_original, glm::dvec3(real_x, real_y, 0));
-			if(isBarycentricCoordInBounds(real_coordinate)) {
-
-				int z_quantize = inv_z * 100000;
-
-				int original_z = atomicMax(&zbuffer[pixel], z_quantize);
-
-				if (original_z < z_quantize) {
-					glm::vec3 rgb = baryCentricCoordinate;
-					if (render_primitives == 0) {
-						atomicExchRGBZ(&zbuffer[pixel], &color[pixel], z_quantize, CompactRGBToInt(rgb));
-					} else {
-						atomicExchRGBZ(&zbuffer[pixel], &findices[pixel], z_quantize, idx);
-					}
-				}
-			}
-		}
-	}
-}
-
-void Annotate(int H, int W, int floor_id, int ceiling_id, float vy, float vx, float* line_bottom_x, float* line_top_x, 
-bool* whether_ceiling, bool* whether_wall, bool* whether_floor, float* ceiling_y, float* floor_y)
-
-
-void Render(VertexBuffer& vertexBuffer, FrameBuffer& frameBuffer, int renderPrimitive) {
-	cudaMemcpyToSymbol(height, &frameBuffer.row, sizeof(int), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(width, &frameBuffer.col, sizeof(int), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(cx, &frameBuffer.cx, sizeof(float), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(cy, &frameBuffer.cy, sizeof(float), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(fx, &frameBuffer.fx, sizeof(float), 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(fy, &frameBuffer.fy, sizeof(float), 0, cudaMemcpyHostToDevice);
-
-	cudaMemcpyToSymbol(render_primitives, &renderPrimitive, sizeof(int), 0, cudaMemcpyHostToDevice);
-
-	cudaMemcpyToSymbol(rotation, &vertexBuffer.rotation, sizeof(float) * 9, 0, cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbol(translation, &vertexBuffer.translation, sizeof(float) * 3, 0, cudaMemcpyHostToDevice);
-
-	cudaMemcpyToSymbol(num_primitives, &vertexBuffer.num_indices, sizeof(int), 0, cudaMemcpyHostToDevice);
-
-	Render_gpu<<<(vertexBuffer.num_indices + 255) / 256, 256>>>(vertexBuffer.d_positions, vertexBuffer.d_indices, frameBuffer.d_colors, frameBuffer.d_findices, frameBuffer.d_z);
+    cudaMemcpy((void*)floors_x, (void*)floors_x_gpu, 2 * W * sizeof(float), cudaMemcpyDeviceToHost);
+	cudaFree(floors_x_gpu);
 }

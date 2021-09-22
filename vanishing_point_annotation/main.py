@@ -7,6 +7,7 @@ import numpy as np
 import utils
 import data_utils
 import time
+import lib.cuda_caller
 
 def annotation_one_picture(base_dir, save_dir, scene_id, id):
     """Annotate one picture
@@ -24,7 +25,7 @@ def annotation_one_picture(base_dir, save_dir, scene_id, id):
     vy, vx = utils.get_vanishing_point(H, W, intrinsic, extrinsic)
     print(vy, vx)
     lines = utils.get_lines(H, W, vy, vx)
-    whether_ceilings, whether_floors, whether_walls, ceiling_places, floor_places = utils.get_ceiling_and_floor(layout_seg, lines, 7, 4)
+    whether_ceilings, whether_floors, whether_walls, ceiling_places, floor_places = lib.cuda_caller.get_ceiling_and_floor(layout_seg, lines, 7, 4)
     whether_boundaries = utils.get_wall_boundaries(layout_seg, lines, 7, 4)
     
     end = time.time()
