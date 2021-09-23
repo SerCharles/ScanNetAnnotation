@@ -31,11 +31,10 @@ bool* whether_ceilings, bool* whether_walls, bool* whether_floors, float* ceilin
     int i = blockIdx.x * blockDim.x + threadIdx.x;
 	if (i >= 2 * width)
 		return;
-
     float top_x = line_top_x[i];
     float top_y = 0.0;
     float bottom_x = line_bottom_x[i];
-    float bottom_y = 0.0;
+    float bottom_y = height - 1.0;
     float dy = 1.0;
     float dx = (bottom_x - top_x) / bottom_y;
     bool whether_ceiling = 0;
