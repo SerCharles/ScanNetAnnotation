@@ -97,6 +97,25 @@ def load_data(base_dir, scene_id, id):
     
     return intrinsic, extrinsic, layout_seg
 
+def save_annotation_result(full_save_dir, vanishing_y, vanishing_x, whether_ceilings, whether_floors, whether_walls, whether_boundaries, ceiling_places, floor_places):
+    """Save the annotation result
+
+    Args:
+        full_save_dir [string]: [the full place to save the numpy arraus]
+        vanishing_y [float]: [the y of the vanishing point of the picture]    
+        vanishing_x [float]: [the x of the vanishing point of the picture] 
+        whether_ceilings [numpy boolean array], [(2 * W)]: [whether the lines have ceiling]
+        whether_floors [numpy boolean array], [(2 * W)]: [whether the lines have floor]
+        whether_walls [numpy boolean array], [(2 * W)]: [whether the lines have wall]
+        whether_boundaries [numpy boolean array], [(2 * W)]: [whether the lines are wall-wall boundaries]
+        ceiling_places [numpy float array], [2 * (2 * W)]: [the ceiling place of each line, (y, x)]
+        floor_places [numpy float array], [2 * (2 * W)]: [the floor place of each line, (y, x)]
+    """
+    vanishing_point = np.zeros((2), dtype=np.float32)
+    vanishing_point[0] = vanishing_y
+    vanishing_point[1] = vanishing_x
+    np.savez(full_save_dir, vanishing_point=vanishing_point, whether_ceilings=whether_ceilings, whether_floors=whether_floors, whether_walls=whether_walls, \
+        whether_boundaries=whether_boundaries, ceiling_places=ceiling_places, floor_places=floor_places)
 
 def visualize_annotation_result(full_save_dir, layout_seg, lines, whether_ceilings, whether_floors, whether_walls, whether_boundaries, ceiling_places, floor_places):
     """Visualize the annotation result
@@ -114,8 +133,7 @@ def visualize_annotation_result(full_save_dir, layout_seg, lines, whether_ceilin
     """
     H, W = layout_seg.shape
     final_color = layout_seg * 3000
-    #np.zeros((H, W), dtype=np.uint16)
-    #
+
     for i in range(2 * W):
         if whether_ceilings[i] == True:
             y = int(ceiling_places[0, i])

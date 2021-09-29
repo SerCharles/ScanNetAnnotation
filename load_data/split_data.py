@@ -18,6 +18,18 @@ def split_train_valid(base_dir, base_dir_plane, whether_clear):
     valid_list = []
     f_train = open(train_name, 'w')
     f_valid = open(valid_name, 'w')
+
+    remove_list_name = os.path.join(base_dir, 'remove_list.txt')
+    f_remove = open(remove_list_name, 'r')
+    remove_list = f_remove.read().split('\n')
+    for remove_id in remove_list:
+        if len(remove_id) > 0:
+            remove_dir = os.path.join(base_dir, remove_id)
+            try: 
+                os.system('rm -rf ' + remove_dir)
+            except: 
+                pass
+
     for name in glob.glob(os.path.join(base_dir, '*')):
         scene_id = name.split(os.sep)[-1]
         if scene_id == 'train.txt' or scene_id == 'valid.txt':
@@ -96,10 +108,10 @@ def split_train_valid(base_dir, base_dir_plane, whether_clear):
 def main():
     """The main function of data clearing
     """
-    parser = argparse.ArgumentParser(descriptio ='')
-    parser.add_argument('--base_dir', default='/home1/shenguanlin/scannet_mine', type=str)
-    parser.add_argument('--base_dir_plane', default='/home1/shenguanlin/scannet_planes', type=str)
-    parser.add_argument('--clear', default=0, type=int)
+    parser = argparse.ArgumentParser(description='')
+    parser.add_argument('--base_dir', default='/home1/shenguanlin/scannet_pretrain', type=str)
+    parser.add_argument('--base_dir_plane', default='/home1/shenguanlin/scannet_planes_mine', type=str)
+    parser.add_argument('--clear', default=1, type=int)
 
     args = parser.parse_args()
     split_train_valid(args.base_dir, args.base_dir_plane, args.clear)

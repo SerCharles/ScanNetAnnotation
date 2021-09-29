@@ -1,6 +1,5 @@
 """The mathematics util functions of vanishing point annotation
 """
-import os
 from math import *
 import numpy as np
 from sklearn.linear_model import LinearRegression
@@ -219,7 +218,13 @@ def get_wall_boundaries(layout_seg, lines, ceiling_id, floor_id):
                 if dist < min_distance:
                     min_distance = dist 
                     best_id = j 
-            if best_id >= 0 and best_id < W and min_distance < 15.0:
+                    
+            if best_id == 0 or best_id == W - 1:
+                dist_threshold = 5.0
+            else:
+                dist_threshold = 15.0
+                
+            if best_id >= 0 and best_id < W and min_distance < dist_threshold:
                 whether_boundaries[best_id] = True 
             
 
@@ -234,7 +239,13 @@ def get_wall_boundaries(layout_seg, lines, ceiling_id, floor_id):
                 if dist < min_distance:
                     min_distance = dist 
                     best_id = j 
-            if best_id >= 0 and best_id < W and min_distance < 15.0:
+                    
+            if best_id == 0 or best_id == W - 1:
+                dist_threshold = 5.0
+            else:
+                dist_threshold = 15.0
+                
+            if best_id >= 0 and best_id < W and min_distance < dist_threshold:
                 whether_boundaries[best_id + W] = True   
 
     return whether_boundaries
