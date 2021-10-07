@@ -170,4 +170,3 @@ def visualize_annotation_result(full_save_dir, layout_seg, lines, whether_ceilin
     picture = Image.fromarray(final_color)
     picture.save(full_save_dir)
     
-         

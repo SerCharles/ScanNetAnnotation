@@ -3,7 +3,6 @@ import numpy as np
 import os
 
 libpath = os.path.dirname(os.path.abspath(__file__))
-print(libpath)
 Annotator = cdll.LoadLibrary(os.path.join(libpath, 'Annotator.so'))
 
 def get_ceiling_and_floor(layout_seg, lines, ceiling_id, floor_id):
@@ -24,6 +23,8 @@ def get_ceiling_and_floor(layout_seg, lines, ceiling_id, floor_id):
         ceiling_places [numpy float array], [2 * (2 * W)]: [the ceiling place of each line, (y, x)]
         floor_places [numpy float array], [2 * (2 * W)]: [the floor place of each line, (y, x)]
     """
+
+
     H, W = layout_seg.shape
     line_bottom_x = np.zeros((2 * W), dtype="float32")
     line_top_x = np.zeros((2 * W), dtype="float32")
@@ -60,7 +61,7 @@ def get_ceiling_and_floor(layout_seg, lines, ceiling_id, floor_id):
     
     ceiling_places = np.stack((ceilings_y, ceilings_x), axis=0)
     floor_places = np.stack((floors_y, floors_x), axis=0)
-
+    
 
     return whether_ceilings, whether_floors, whether_walls, ceiling_places, floor_places
 

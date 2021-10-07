@@ -36,13 +36,15 @@ def annotation_one_picture(base_dir, save_dir, scene_id, id, ceiling_id, floor_i
     data_utils.save_annotation_result(full_save_dir, vy, vx, whether_ceilings, whether_floors, whether_walls, whether_boundaries, ceiling_places, floor_places)
     return end - start
 
-def annotation_one_scene(base_dir_scannet, base_dir_plane, scene_id):
-    """Annotate one scene
+def annotation_one_scene(base_dir_scannet, base_dir_plane, scene_id, start_num, number_per_round):
+    """Annotate one scene, 100 once a time
 
     Args:
         base_dir_scannet [string]: [the base directory of our modified ScanNet dataset]
         base_dir_plane [string]: [the base directory of our modified ScanNet-Planes dataset]
         scene_id [string]: [the scene id to be handled]
+        start_num [int]: [the number of start]
+        number_per_round [int]: [the number to be rendered per round]
     """
     json_place = os.path.join(base_dir_plane, scene_id + '.json')
     with open(json_place, 'r', encoding='utf8')as fp:
@@ -54,6 +56,7 @@ def annotation_one_scene(base_dir_scannet, base_dir_plane, scene_id):
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
     full_name_list = glob.glob(os.path.join(base_dir_scannet, scene_id, 'pose', "*.txt"))
+    full_name_list.sort()
     id_list = []
     for full_name in full_name_list:
         file_name = full_name.split(os.sep)[-1]
@@ -61,7 +64,11 @@ def annotation_one_scene(base_dir_scannet, base_dir_plane, scene_id):
         id_list.append(id)
         
     total_time = 0.0
-    for id in id_list:
+    for i in range(number_per_round):
+        index = start_num + i 
+        if index >= len(id_list):
+            break
+        id = id_list[index]
         dtime = annotation_one_picture(base_dir_scannet, save_dir, scene_id, id, ceiling_id, floor_id)
         total_time += dtime 
     avg_time = total_time / len(id_list)
@@ -75,10 +82,15 @@ def main():
     parser.add_argument('--base_dir_scannet', default='/home1/sgl/scannet_mine', type=str)
     parser.add_argument('--base_dir_plane', default='/home1/sgl/scannet_planes_mine', type=str)
     parser.add_argument('--scene_id', default='scene0000_01', type=str)
-    args = parser.parse_args()
+    parser.add_argument('--start_num', default=0, type=int)
+    parser.add_argument('--number_per_round', default=100, type=int)
 
-    print('Rendering', args.scene_id)
-    annotation_one_scene(args.base_dir_scannet, args.base_dir_plane, args.scene_id)
+
+    args = parser.parse_args()
+    if args.start_num == 0:
+        print('Rendering', args.scene_id)
+    annotation_one_scene(args.base_dir_scannet, args.base_dir_plane, args.scene_id, args.start_num, args.number_per_round)
+
     
 
 if __name__ == "__main__":
