@@ -2,6 +2,7 @@
 """
 import os
 import glob
+import argparse
 import time
 import numpy as np
 from math import *
@@ -24,10 +25,11 @@ def process_one_picture(base_dir, scene_id, id, save_dir):
     base_name, intrinsic, extrinsic, image, depth, normal, seg, layout_seg, vanishing_point, whether_boundary, mask\
         = data_utils.load_one_picture(base_dir, scene_id, id)
     plane_info_per_pixel = utils.get_plane_info_per_pixel(normal, depth, intrinsic)
-    cluster_result = utils.clustering(mask, plane_info_per_pixel)
+    cluster_result = utils.clustering(seg, plane_info_per_pixel)
     cluster_ids = torch.unique(cluster_result)
     average_plane_info = utils.get_average_plane_info_from_pixels(plane_info_per_pixel, cluster_result)
-    
+    average_plane_info_global = utils.rotate_plane(average_plane_info, source_extrinsic=extrinsic)
+
     #classify planes  
     ceiling_ids = []
     floor_ids = []
@@ -36,7 +38,7 @@ def process_one_picture(base_dir, scene_id, id, save_dir):
         plane_id = int(cluster_ids[i])
         if plane_id == 0:
             continue
-        plane_info = average_plane_info[plane_id]
+        plane_info = average_plane_info_global[plane_id]
         A = plane_info[0]
         B = plane_info[1]
         C = plane_info[2]
@@ -61,7 +63,7 @@ def process_one_picture(base_dir, scene_id, id, save_dir):
         wall_segs = torch.cat(wall_segs, dim=0)
         #TODO: bounding box
     
-    data_utils.save_one_picture(base_dir, scene_id, id, save_dir, image, vanishing_point, whether_boundary, wall_segs)
+        data_utils.save_one_picture(base_dir, scene_id, id, save_dir, image, vanishing_point, whether_boundary, wall_segs)
     end = time.time()
     print('Processed', base_name, 'time cost', '{:.4f}s'.format(end - start))
     return whether_valid
@@ -76,7 +78,6 @@ def process_one_scene(base_dir, scene_id, save_dir):
         save_dir [string]: [the save directory]
     """
     print('Processing', scene_id)
-    valid_file_name = os.path.join(base_dir, scene_id, 'vp_list.txt')
     valid_id_list = []
     
     full_name_list = glob.glob(os.path.join(base_dir, scene_id, 'pose', "*.txt"))
@@ -92,6 +93,7 @@ def process_one_scene(base_dir, scene_id, save_dir):
         if whether_valid == True:
             valid_id_list.append(id)
     
+    valid_file_name = os.path.join(base_dir, scene_id, 'vp_list.txt')
     f = open(valid_file_name, 'w')
     for i in range(len(valid_id_list)):
         id = valid_id_list[i]
@@ -117,5 +119,16 @@ def process_all(base_dir, save_dir):
     for scene_id in scene_list:
         process_one_scene(base_dir, save_dir)
         
-process_one_scene('/home2/sgl/scannet_mine', 'scene0000_01', '/home2/sgl/data_test')
+def main():
+    """The main function
+    """
+    parser = argparse.ArgumentParser(description='')
+    parser.add_argument('--base_dir', default='/home2/sgl/scannet_mine', type=str)
+    parser.add_argument('--save_dir', default='/home2/sgl/data_test', type=str)
+    args = parser.parse_args()
+    process_all(args.base_dir, args.save_dir)
+
+if __name__ == "__main__":
+    #main()
+    process_one_scene('/home2/sgl/scannet_mine', 'scene0000_01', '/home2/sgl/data_test')
             

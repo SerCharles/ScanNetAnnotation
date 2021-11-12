@@ -116,21 +116,21 @@ def get_average_plane_info_from_pixels(plane_info_per_pixel, plane_seg):
         plane_seg [torch int array], [1 * H * W]: [the segmentation label per pixel]
 
     Returns:
-        average_plane_infos [torch float array], [(M + 1) * 4]: [the average plane info of the plane, (A, B, C, D) which satisfies Ax + By + Cz + D = 0]
+        average_plane_info [torch float array], [(M + 1) * 4]: [the average plane info of the plane, (A, B, C, D) which satisfies Ax + By + Cz + D = 0]
     """
     M = int(torch.max(plane_seg))
     _, H, W  = plane_info_per_pixel.size()
 
-    average_plane_infos = []
+    average_plane_info = []
     for i in range(0, M + 1):
-        mask_batch = torch.eq(plane_seg, i).repeat(4, 1, 1) #1 * H * W
+        mask_batch = torch.eq(plane_seg, i) #1 * H * W
         the_total = torch.sum(plane_info_per_pixel * mask_batch, dim=[1, 2]) #4
         useful_sum = torch.sum(mask_batch) #1
         new_count = useful_sum + torch.eq(useful_sum, 0) #trick to avoid / 0
-        new_average_plane_info = (the_total / new_count).unsqueeze(0) #4
-        average_plane_infos.append(new_average_plane_info)
-    average_plane_infos = torch.cat(average_plane_infos, dim=0) #(M + 1) * 4
-    return average_plane_infos
+        new_average_plane_info = (the_total / new_count).unsqueeze(0) #1 * 4
+        average_plane_info.append(new_average_plane_info)
+    average_plane_info = torch.cat(average_plane_info, dim=0).float() #(M + 1) * 4
+    return average_plane_info
 
 def set_average_plane_info_to_pixels(plane_seg, average_plane_info):
     """Set the plane info of all the pixels to be the average info of their planes
@@ -166,7 +166,46 @@ def set_average_plane_info_to_pixels(plane_seg, average_plane_info):
     plane_info_per_pixel = torch.sum(plane_info_per_pixel, dim=0, keepdim=False) #4 * H * W, the result plane info of batch i
     return plane_info_per_pixel
 
+def rotate_plane(average_plane_infos, source_extrinsic=None, target_extrinsic=None):
+    """rotate the plane functions to the target camera coordinate
+        M: the biggest possible segmentation id
 
+    Args:
+        average_plane_infos [torch float array], [(M + 1) * 4]: [the average plane infos in the source camera coordinate]
+        source_extrinsic [torch float array], [4 * 4]: [the extrinsic(camera to world matrix) of source picture]. Defaults to I.
+        target_extrinsic [torch float array], [4 * 4]: [the extrinsic(camera to world matrix) of target picture]. Defaults to I.
+    
+    Returns:
+        target_plane_infos [torch float array], [(M + 1) * 4]: [the average plane infos in the target camera coordinate]
+    """
+    M, _ = average_plane_infos.size()
+    M = M - 1
+    if source_extrinsic == None:
+        source_extrinsic = torch.eye(4) #4 * 4
+
+    if target_extrinsic == None:
+        target_extrinsic = torch.eye(4) #4 * 4 
+
+    target_plane_infos = []
+    for i in range(M + 1):
+        W = average_plane_infos[i, 0:3] #3
+        D = average_plane_infos[i, 3:4] #1
+
+        #convert the source coordinate to the world coordinate
+        rotation = source_extrinsic[:3, :3] #3 * 3
+        translation = source_extrinsic[:3, 3].view(3) #3
+        world_W = torch.matmul(rotation, W) #3
+        world_D = D - torch.matmul(W.view(1, 3), torch.matmul(rotation.permute(1, 0), translation)) # 1
+
+        #convert the world coordinate to the target coordinate
+        rotation = torch.inverse(target_extrinsic[:3, :3]) #3 * 3
+        translation = -torch.matmul(rotation, target_extrinsic[:3, 3]) #3
+        target_W = torch.matmul(rotation, world_W) #3
+        target_D = world_D - torch.matmul(world_W.view(1, 3), torch.matmul(rotation.permute(1, 0), translation)) #1
+        target_plane_info = torch.cat((target_W, target_D), dim=0).view(1, 4) #1 * 4
+        target_plane_infos.append(target_plane_info)
+    target_plane_infos = torch.cat(target_plane_infos, dim=0) #(M + 1) * 4
+    return target_plane_infos
 
 
 #clustering
