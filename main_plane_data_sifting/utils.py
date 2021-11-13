@@ -217,13 +217,17 @@ def mean_shift_clustering(plane_info):
         plane_info [panda float array], [N * 4]: [the plane info of valid pixels/points]
 
     Returns:
-        labels [numpy in array], [N]: [the clustering labels of valid pixels]
+        labels [numpy int array], [N]: [the clustering labels of valid pixels]
     """
-    bandwidth = estimate_bandwidth(plane_info, quantile=0.1, n_samples=1000)
-    ms = MeanShift(bandwidth=bandwidth, bin_seeding=True)
-    ms.fit(plane_info)
-    labels = ms.labels_
-    return labels
+    N = len(plane_info)
+    try:
+        bandwidth = estimate_bandwidth(plane_info, quantile=0.1, n_samples=1000)
+        ms = MeanShift(bandwidth=bandwidth, bin_seeding=True)
+        ms.fit(plane_info)
+        labels = ms.labels_
+        return labels
+    except:
+        return np.zeros((N), dtype=np.int32)
 
 def get_useful_labels(labels, threshold):
     """Select the clustering labels whose sum are big enough
@@ -264,6 +268,10 @@ def clustering(mask, plane_info, threshold_ratio=0.05):
     M = H * W
     mask = mask.view(1, M) #1 * M
     plane_info = plane_info.view(4, M) #1 * M
+    total_num = mask.sum()
+    if total_num <= 0:
+        labels = torch.zeros((1, H, W), dtype=torch.int)
+        return labels
 
     #select only the pixels whose plane info are valid
     index_list = torch.linspace(0, M - 1, steps=M, dtype=np.int).view(1, M)
@@ -295,3 +303,99 @@ def clustering(mask, plane_info, threshold_ratio=0.05):
 
 
 #bounding box and measures
+def get_bounding_box(vanishing_point, wall_seg, threshold=0.9):
+    """Estimate the bounding box of the wall based on current seg
+        H: the height of the picture
+        W: the width of the picture
+
+    Args:
+        vanishing_point [torch float array], [2]: [the vanishing point, (y, x)]
+        wall_seg [torch boolean array], [1 * H * W]: [whether the pixel belongs to current wall]
+        threshold (float, optional): [the minimize rate that the bounding box must cover]. Defaults to 0.9.
+
+    Returns:
+        bounding_box [torch float array], [2]: [the bounding box of the wall on the picture, (left right)]
+    """
+    vy, vx = vanishing_point
+    _, H, W = wall_seg.size()
+    xx, yy = np.meshgrid(np.array([ii for ii in range(W)]), np.array([ii for ii in range(H)]))
+    xx = torch.from_numpy(xx)
+    yy = torch.from_numpy(yy)
+    x_in_vp_coordinate = xx + (H - 1 - yy) * (vx - xx) / (vy - yy)
+    total_num = torch.sum(wall_seg)
+    threshold_single_side = threshold + (1.0 - threshold) / 2.0
+
+    right_bounding_x = -1
+    left_bounding_x = -1
+    for i in range(W):
+        right_x = float(i) 
+        left_x = float(W - 1 - i) 
+        right_x_cover_num = torch.sum(torch.le(x_in_vp_coordinate, right_x) * wall_seg)
+        left_x_cover_num = torch.sum(torch.ge(x_in_vp_coordinate, left_x) * wall_seg)
+        right_x_rate = right_x_cover_num / total_num
+        left_x_rate = left_x_cover_num / total_num
+
+        if right_bounding_x < 0 and right_x_rate >= threshold_single_side:
+            right_bounding_x = right_x 
+        if left_bounding_x < 0 and left_x_rate >= threshold_single_side:
+            left_bounding_x = left_x
+        if right_bounding_x >= 0 and left_bounding_x >= 0:
+            break 
+    if right_bounding_x < 0:
+        right_bounding_x = W - 1
+    if left_bounding_x < 0:
+        left_bounding_x = 0
+    
+    bounding_box = torch.from_numpy(np.array([left_bounding_x, right_bounding_x]))
+    return bounding_box
+
+
+def estimate_boundary(bounding_box, whether_boundary, permit_threshold_ratio=0.05):
+    """A test function, use bounding box and ground truth boundary to estimate boundary
+        H: the height of the picture
+        W: the width of the picture
+
+    Args:
+        bounding_box [torch float array], [2]: [the bounding box of the wall on the picture, (left right)]
+        whether_boundary [torch boolean array], [W]: [whether there are boundaries]
+
+    Returns:
+        boundary [torch float array], [2]: [the bounding box of the wall on the picture, (left right)]
+    """
+    W = whether_boundary.size(0)
+    permit_threshold = W * permit_threshold_ratio
+    index = torch.from_numpy(np.arange(0, W))
+    boundaries = torch.masked_select(index, whether_boundary).int()
+    extended_boundaries = [torch.from_numpy(np.array([0])).int(), boundaries, torch.from_numpy(np.array([W - 1])).int()]
+    extended_boundaries = torch.cat(extended_boundaries, dim=0)
+    dist_left = extended_boundaries - bounding_box[0]
+    mask_left = dist_left <= permit_threshold
+    dist_left = torch.abs(dist_left) + (~mask_left) * W
+
+    dist_right = bounding_box[1] - extended_boundaries
+    mask_right = dist_right <= permit_threshold
+    dist_right = torch.abs(dist_right) + (~mask_right) * W
+
+    best_left_id = torch.argmin(dist_left)
+    best_left = extended_boundaries[best_left_id]
+    best_right_id = torch.argmin(dist_right)
+    best_right = extended_boundaries[best_right_id]
+    boundary = torch.from_numpy(np.array([int(best_left), int(best_right)]))
+    return boundary
+
+def boundary_dist(boundary, boundary_gt, W):
+    """Get the boundary dist of a picture's walls
+        M: the number of walls
+
+    Args:
+        boundary [torch float array], [M * 2]: [the bounding box of the wall on the picture, (left right)]
+        boundary_gt [torch float array], [M * 2]: [the ground truth bounding box of the wall on the picture, (left right)]
+        W: [int]: [the width of the wall]
+    
+    Returns:
+        dist_mean [float]: [the relative distance]
+    """
+    dist_boundary = torch.abs(boundary - boundary_gt)
+    dist_relative = dist_boundary / W 
+    dist_mean = torch.mean(dist_relative)
+    return dist_mean

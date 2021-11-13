@@ -232,7 +232,7 @@ def load_one_picture(base_dir, scene_id, id):
     old_size = image.size
     new_size = [256, 256]
     vanishing_point = torch.from_numpy(vanishing_point)
-    whether_boundary = torch.from_numpy(whether_boundary[0: old_size[0]])
+    whether_boundary = torch.from_numpy(whether_boundary[old_size[0]:])
 
     #transform data    
     transform_float = transforms.Compose([transforms.Resize(new_size, interpolation=Image.BILINEAR), transforms.ToTensor()])
@@ -271,16 +271,20 @@ def add_boundary(image, vanishing_point, whether_boundary):
         current_x = float(i) 
         for j in range(H):
             place_x = int(current_x)
+            place_y = H - 1 - j
+            if place_x < 0 or place_x >= W:
+                break 
+
             if C == 1:
                 image[0, j, place_x] = True 
             else: 
                 image[0, j, place_x] = 0.99
-            current_x += dx 
+            current_x -= dx 
     return image
             
         
 
-def save_one_picture(base_dir, scene_id, id, save_dir, image, vanishing_point, whether_boundary, wall_segs):
+def save_one_picture(base_dir, scene_id, id, save_dir, image, vanishing_point, whether_boundary, wall_segs, bounding_boxes, estimate_boundaries):
     """Save the information of one picture 
         N: the wall numbers
         H: the height of the picture
@@ -294,25 +298,54 @@ def save_one_picture(base_dir, scene_id, id, save_dir, image, vanishing_point, w
         vanishing_point [torch float array], [2]: [the vanishing points of the group]
         whether_boundary [torch boolean array], [W]: [whether there are boundaries of the group]
         wall_segs [torch boolean array], [N * 1 * H * W]: [the segmentation information of one wall]
+        bounding_boxes [torch float array], [N * 2]: [the bounding box of the wall on the picture, (left right)]
+        estimate_boundaries [torch float array], [N * 2]: [the estimated boundaries of the wall, (left right)]
     """
     base_name = scene_id + '_' + str(id)
     save_dir_this = os.path.join(save_dir, base_name)
     if not os.path.exists(save_dir_this):
         os.mkdir(save_dir_this)
         
+
     N, _, H, W = wall_segs.size()
     total_wall_seg = torch.zeros((1, H, W), dtype=bool)
     for i in range(N):
         total_wall_seg = total_wall_seg | wall_segs[i]
         this_seg_name = base_name + '_' + str(i) + '_seg.png'
+        this_seg_bb_name = base_name + '_' + str(i) + '_bb.png'
         this_seg_np = base_name + '_' + str(i) + '_seg.npy'
         this_seg_name_full = os.path.join(save_dir_this, this_seg_name)
+        this_seg_bb_name_full = os.path.join(save_dir_this, this_seg_bb_name)
         this_seg_np_full = os.path.join(save_dir_this, this_seg_np)
         np.save(this_seg_np_full, wall_segs[i].numpy())
-        this_seg = add_boundary(wall_segs[i], vanishing_point, whether_boundary)
+
+        whether_bounding_box = torch.zeros((W), dtype=torch.bool)
+        id_left = int(bounding_boxes[i, 0])
+        id_right = int(bounding_boxes[i, 1])
+        if id_left > 0 and id_left < W - 1:
+            whether_bounding_box[id_left] = True 
+        if id_right > 0 and id_right < W - 1:
+            whether_bounding_box[id_right] = True 
+
+        whether_boundary_estimate = torch.zeros((W), dtype=torch.bool)
+        id_left = int(estimate_boundaries[i, 0])
+        id_right = int(estimate_boundaries[i, 1])
+        if id_left > 0 and id_left < W - 1:
+            whether_boundary_estimate[id_left] = True 
+        if id_right > 0 and id_right < W - 1:
+            whether_boundary_estimate[id_right] = True  
+
+        the_seg = wall_segs[i].clone()
+        this_seg = add_boundary(the_seg, vanishing_point, whether_boundary_estimate)
         this_seg = (this_seg.view(H, W) * 60000).numpy().astype(np.uint16)
         picture_seg = Image.fromarray(this_seg)
         picture_seg.save(this_seg_name_full)
+
+        the_seg = wall_segs[i].clone()
+        this_bb = add_boundary(the_seg, vanishing_point, whether_bounding_box)
+        this_bb = (this_bb.view(H, W) * 60000).numpy().astype(np.uint16)
+        picture_bb = Image.fromarray(this_bb)
+        picture_bb.save(this_seg_bb_name_full)
 
     total_seg_name = base_name + '_total_seg.png'
     total_seg_name_full = os.path.join(save_dir_this, total_seg_name)
