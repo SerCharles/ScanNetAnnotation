@@ -110,7 +110,10 @@ def process_one_scene(base_dir, scene_id, save_dir):
         if whether_valid == True:
             valid_id_list.append(id)
             mean_dist_total += mean_dist
-    mean_dist = mean_dist_total/ len(valid_id_list)
+    if len(valid_id_list) == 0:
+        mean_dist = 0.0
+    else:
+        mean_dist = mean_dist_total/ len(valid_id_list)
     print('mean_dist:', '{:.4f}'.format(mean_dist))
 
     valid_file_name = os.path.join(base_dir, scene_id, 'vp_list.txt')

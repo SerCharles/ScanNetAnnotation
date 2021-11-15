@@ -227,7 +227,7 @@ def mean_shift_clustering(plane_info):
         labels = ms.labels_
         return labels
     except:
-        return np.zeros((N), dtype=np.int32)
+        return -np.ones((N), dtype=np.int32)
 
 def get_useful_labels(labels, threshold):
     """Select the clustering labels whose sum are big enough
