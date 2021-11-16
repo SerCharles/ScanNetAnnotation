@@ -8,7 +8,6 @@ import numpy as np
 import utils
 import data_utils
 import time
-import lib.cuda_caller
 
 def annotation_one_picture(base_dir, save_dir, scene_id, id, ceiling_id, floor_id):
     """Annotate one picture
