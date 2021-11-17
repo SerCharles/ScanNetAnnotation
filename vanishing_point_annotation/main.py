@@ -67,6 +67,7 @@ def annotation_one_scene(base_dir_scannet, base_dir_plane, scene_id):
         dtime = annotation_one_picture(base_dir_scannet, save_dir, scene_id, id, ceiling_id, floor_id)
         total_time += dtime 
     avg_time = total_time / len(id_list)
+    print('Rendered', scene_id)
     print('total time is', total_time, 's')
     print('average time is', avg_time, 's')
     
@@ -97,8 +98,8 @@ def main():
     """The main function of vanishing point annotation
     """
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--base_dir_scannet', default='/home1/shenguanlin/scannet_mine', type=str)
-    parser.add_argument('--base_dir_plane', default='/home1/shenguanlin/scannet_planes_mine', type=str)
+    parser.add_argument('--base_dir_scannet', default='/home2/sgl/scannet_mine', type=str)
+    parser.add_argument('--base_dir_plane', default='/home2/sgl/scannet_planes_mine', type=str)
     args = parser.parse_args()
     annotation_all(args.base_dir_scannet, args.base_dir_plane)
     
