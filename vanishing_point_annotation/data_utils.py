@@ -115,24 +115,23 @@ def save_boundaries(base_dir, scene_id, id, vanishing_point, boundary_angles, bo
     save_place = os.path.join(save_dir, scene_id + '_' + str(id) + '.npz')
     np.savez(save_place, vanishing_point=vanishing_point, boundary_angles=boundary_angles, boundary_segs=boundary_segs)
 
-def visualize_boundaries(save_dir, base_name, H, W, vanishing_point, boundary_angles, layout_seg):
+def visualize_boundaries(save_dir, base_name, vanishing_point, whether_boundary, layout_seg):
     """Visualize the boundaries
 
     Args:
         save_dir [string]: [the base save directory of the data]
         base_name [string]: [the base name of the picture]
-        H [int]: [the height of the picture]
-        W [int]: [the width of the picture]
         vanishing_point [numpy float array], [2]: [the vanishing point of the picture, (y, x)]    
-        boundary_angles [numpy float array], [M]: [the absolute angles of the boundaries]
+        whether_boundary [numpy float array], [W]: [the absolute angles of the boundaries]
         layout_seg [numpy int array], [H * W]: [the layout segmentation of the picture]
     """
+    H, W = layout_seg.shape
     full_save_dir = os.path.join(save_dir, base_name + '.png')
     final_color = layout_seg * 3000
     vy = float(vanishing_point[0])
     vx = float(vanishing_point[1])
-    relative_angles = utils.get_relative_angles(H, W, vanishing_point, boundary_angles)
-    boundary_places = np.clip((relative_angles * W), 0, W - 1)
+    index = np.arange(0, W)
+    boundary_places = index[whether_boundary]
     
     for place in boundary_places:
         if vy > H - 1:

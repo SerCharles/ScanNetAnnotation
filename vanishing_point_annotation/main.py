@@ -8,6 +8,7 @@ import numpy as np
 import utils
 import data_utils
 import time
+import random 
 
 def annotation_one_picture(base_dir, save_dir, scene_id, id, ceiling_id, floor_id):
     """Annotate one picture
@@ -30,6 +31,10 @@ def annotation_one_picture(base_dir, save_dir, scene_id, id, ceiling_id, floor_i
         boundary_angles, boundary_segs = utils.get_wall_boundaries(layout_seg, vanishing_point, ceiling_id, floor_id)
         base_name = scene_id + '_' + str(id)
         data_utils.save_boundaries(base_dir, scene_id, id, vanishing_point, boundary_angles, boundary_segs)
+
+        if random.random() < 0.1:
+            whether_boundary = utils.get_whether_boundaries(H, W, vanishing_point, boundary_angles)
+            data_utils.visualize_boundaries('/home/shenguanlin/test', base_name, vanishing_point, whether_boundary, layout_seg)
     
     end = time.time()
     return end - start

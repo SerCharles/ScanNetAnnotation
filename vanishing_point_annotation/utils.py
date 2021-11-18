@@ -103,34 +103,6 @@ def get_wall_boundaries(layout_seg, vanishing_point, ceiling_id, floor_id):
     boundary_angles = np.array(boundary_angles, dtype=np.float32)
     boundary_segs = np.array(boundary_segs, dtype=np.int32)
     return boundary_angles, boundary_segs
-                
-def get_relative_angles(H, W, vanishing_point, absolute_angles):
-    """Switch the absolute angles to the relative angles
-        H: the height of the picture
-        W: the width of the picture
-        M: the number of boundaries
-        
-    Args:
-        H [int]: [the height of the picture]
-        W [int]: [the width of the picture]
-        vanishing_point [numpy float array], [2]: [the vanishing point of the picture, (y, x)]    
-        absolute_angles [numpy float array], [M]: [the absolute angles of the boundaries]
-    
-    Returns:
-        relative_angles [numpy float array], [M]: [the relative angles of the boundaries]
-    """
-    vy = float(vanishing_point[0])
-    vx = float(vanishing_point[1])
-    max_dx = vx - W + 1 
-    min_dx = vx
-    if vy > H - 1:
-        dy = vy - H + 1 
-    else: 
-        dy = vy
-    min_angle = acos(min_dx / sqrt(min_dx ** 2 + dy ** 2))
-    max_angle = acos(max_dx / sqrt(max_dx ** 2 + dy ** 2))
-    relative_angles = (absolute_angles - min_angle) / (max_angle - min_angle)
-    return relative_angles
 
 
 def get_whether_boundaries(H, W, vanishing_point, boundary_angles):
@@ -145,9 +117,19 @@ def get_whether_boundaries(H, W, vanishing_point, boundary_angles):
     Returns:
         whether_boundaries [numpy bool array], [W]: [whether the lines are boundaries]
     """
-    relative_angles = get_relative_angles(H, W, vanishing_point, boundary_angles)
-    boundary_places = np.clip((relative_angles * W).astype(np.int32), 0, W - 1)
-    whether_boundaries = np.zeros((W), dtype=np.bool)
-    whether_boundaries[boundary_places] = True 
+    whether_boundaries = np.zeros(W, dtype=np.bool)
+    M = boundary_angles.shape[0]
+    vy = float(vanishing_point[0])
+    vx = float(vanishing_point[1])
+    if vy > H - 1:
+        y = H - 1
+    else: 
+        y = 0
+    dy = abs(vy - y)
+    for i in range(M):
+        cos_theta = cos(boundary_angles[i])
+        dx = cos_theta * dy / sqrt(1 - cos_theta ** 2)
+        x = int(vx - dx) 
+        if x <= W - 1 and x >= 0:
+            whether_boundaries[x] = True 
     return whether_boundaries
-
