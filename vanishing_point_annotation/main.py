@@ -26,16 +26,10 @@ def annotation_one_picture(base_dir, save_dir, scene_id, id, ceiling_id, floor_i
     start = time.time()
     vanishing_point = utils.get_vanishing_point(H, W, intrinsic, extrinsic)
     vy = float(vanishing_point[0])
-    
     if vy > H - 1 or vy < 0:
         boundary_angles, boundary_segs = utils.get_wall_boundaries(layout_seg, vanishing_point, ceiling_id, floor_id)
-        base_name = scene_id + '_' + str(id)
-        data_utils.save_boundaries(base_dir, scene_id, id, vanishing_point, boundary_angles, boundary_segs)
-
-        if random.random() < 0.1:
-            whether_boundary = utils.get_whether_boundaries(H, W, vanishing_point, boundary_angles)
-            data_utils.visualize_boundaries('/home/shenguanlin/test', base_name, vanishing_point, whether_boundary, layout_seg)
-    
+        wall_segs = utils.get_wall_seg(layout_seg, ceiling_id, floor_id)
+        data_utils.save_boundaries(base_dir, scene_id, id, vanishing_point, boundary_angles, boundary_segs, wall_segs)
     end = time.time()
     return end - start
 
@@ -103,8 +97,8 @@ def main():
     """The main function of vanishing point annotation
     """
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--base_dir_scannet', default='/home2/sgl/scannet_mine', type=str)
-    parser.add_argument('--base_dir_plane', default='/home2/sgl/scannet_planes_mine', type=str)
+    parser.add_argument('--base_dir_scannet', default='/home1/shenguanlin/scannet_mine', type=str)
+    parser.add_argument('--base_dir_plane', default='/home1/shenguanlin/scannet_planes_mine', type=str)
     args = parser.parse_args()
     annotation_all(args.base_dir_scannet, args.base_dir_plane)
     

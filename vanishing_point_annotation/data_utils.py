@@ -98,7 +98,7 @@ def load_data(base_dir, scene_id, id):
     
     return intrinsic, extrinsic, layout_seg
 
-def save_boundaries(base_dir, scene_id, id, vanishing_point, boundary_angles, boundary_segs):
+def save_boundaries(base_dir, scene_id, id, vanishing_point, boundary_angles, boundary_segs, wall_seg):
     """Save the boundary data
 
     Args:
@@ -108,56 +108,41 @@ def save_boundaries(base_dir, scene_id, id, vanishing_point, boundary_angles, bo
         vanishing_point [numpy float array], [2]: [the vanishing point of the picture, (y, x)]    
         boundary_angles [numpy float array], [M]: [the absolute angles of the boundaries]
         boundary_segs [numpy int array], [M * 2]: [the left and right seg numbers of the boundaries]
+        wall_seg [numpy bool array], [H * W]: [the pixels whose backgrounds are walls]
     """
-    save_dir = os.path.join(base_dir, scene_id, 'boundary')
-    if not os.path.exists(save_dir):
-        os.mkdir(save_dir)
-    save_place = os.path.join(save_dir, scene_id + '_' + str(id) + '.npz')
-    np.savez(save_place, vanishing_point=vanishing_point, boundary_angles=boundary_angles, boundary_segs=boundary_segs)
+    save_dir_npy = os.path.join(base_dir, scene_id, 'boundary')
+    if not os.path.exists(save_dir_npy):
+        os.mkdir(save_dir_npy)
+    save_place_npy = os.path.join(save_dir_npy, scene_id + '_' + str(id) + '.npz')
+    np.savez(save_place_npy, vanishing_point=vanishing_point, boundary_angles=boundary_angles, boundary_segs=boundary_segs)
+    save_dir_seg = os.path.join(base_dir, scene_id, 'wall_seg')
+    if not os.path.exists(save_dir_seg):
+        os.mkdir(save_dir_seg)
+    save_place_seg = os.path.join(save_dir_seg, scene_id + '_' + str(id) + '.png')
+    picture_boundary = wall_seg.astype(np.uint16)
+    picture_boundary = Image.fromarray(picture_boundary)
+    picture_boundary.save(save_place_seg)
 
-def visualize_boundaries(save_dir, base_name, vanishing_point, whether_boundary, layout_seg):
+
+def visualize_boundaries(save_dir, base_name, vanishing_point, boundary_probability_per_pixel, layout_seg):
     """Visualize the boundaries
 
     Args:
         save_dir [string]: [the base save directory of the data]
         base_name [string]: [the base name of the picture]
         vanishing_point [numpy float array], [2]: [the vanishing point of the picture, (y, x)]    
-        whether_boundary [numpy float array], [W]: [the absolute angles of the boundaries]
+        boundary_probability_per_pixel [numpy float array], [H * W]: [whether each pixels are boundaries]
         layout_seg [numpy int array], [H * W]: [the layout segmentation of the picture]
     """
     H, W = layout_seg.shape
-    full_save_dir = os.path.join(save_dir, base_name + '.png')
-    final_color = layout_seg * 3000
-    vy = float(vanishing_point[0])
-    vx = float(vanishing_point[1])
-    index = np.arange(0, W)
-    boundary_places = index[whether_boundary]
-    
-    for place in boundary_places:
-        if vy > H - 1:
-            x = float(place) 
-            y = H - 1
-            dx = -(x - vx) / (y - vy)
-            dy = -1
-        else: 
-            x = float(place)
-            y = 0
-            dx = (x - vx) / (y - vy)
-            dy = 1
-
-        while True:
-            int_x = int(x)
-            int_y = int(y)
-            if int_x >= 0 and int_x < W and int_y >= 0 and int_y < H:
-                final_color[int_y, int_x] = 65535
-            else:
-                break 
-            x += dx 
-            y += dy 
-    
-    final_color = final_color.astype(np.uint16)
-    picture = Image.fromarray(final_color)
-    picture.save(full_save_dir)
+    full_save_dir_seg = os.path.join(save_dir, base_name + '_seg.png')
+    full_save_dir_prob = os.path.join(save_dir, base_name + '_prob.png')
+    final_color_seg = (layout_seg * 3000).astype(np.uint16)
+    final_color_prob = (boundary_probability_per_pixel * 60000).astype(np.uint16)
+    picture_seg = Image.fromarray(final_color_seg)
+    picture_seg.save(full_save_dir_seg)
+    picture_prob = Image.fromarray(final_color_prob)
+    picture_prob.save(full_save_dir_prob)
     print('Written', base_name)
         
     
