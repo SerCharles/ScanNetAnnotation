@@ -73,12 +73,13 @@ def annotation_one_scene(base_dir_scannet, base_dir_plane, scene_id):
 
 
 
-def annotation_all(base_dir_scannet, base_dir_plane):
+def annotation_all(base_dir_scannet, base_dir_plane, start_id):
     """Processing all data
 
     Args:
         base_dir_scannet [string]: [the base directory of our modified ScanNet dataset]
         base_dir_plane [string]: [the base directory of our modified ScanNet-Planes dataset]
+        start_id [string]: [the start processing id]
     """
     scene_list = []
     for name in glob.glob(os.path.join(base_dir_scannet, '*')):
@@ -89,7 +90,8 @@ def annotation_all(base_dir_scannet, base_dir_plane):
     scene_list.sort()
     
     for scene_id in scene_list:
-        annotation_one_scene(base_dir_scannet, base_dir_plane, scene_id)
+        if scene_id >= start_id:
+            annotation_one_scene(base_dir_scannet, base_dir_plane, scene_id)
 
 
 
@@ -97,10 +99,11 @@ def main():
     """The main function of vanishing point annotation
     """
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--base_dir_scannet', default='/home1/shenguanlin/scannet_mine', type=str)
-    parser.add_argument('--base_dir_plane', default='/home1/shenguanlin/scannet_planes_mine', type=str)
+    parser.add_argument('--base_dir_scannet', default='/home2/sgl/scannet_mine', type=str)
+    parser.add_argument('--base_dir_plane', default='/home2/sgl/scannet_planes_mine', type=str)
+    parser.add_argument('--start_id', default='scene0000_01', type=str)
     args = parser.parse_args()
-    annotation_all(args.base_dir_scannet, args.base_dir_plane)
+    annotation_all(args.base_dir_scannet, args.base_dir_plane, args.start_id)
     
 
 
