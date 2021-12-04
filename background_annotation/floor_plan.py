@@ -2,6 +2,8 @@ import os
 import json 
 from math import *
 import numpy as np
+import argparse
+import glob
 
 def load_planes(base_dir, scene_id):
     """Load the ScanNet-Planes dataset
@@ -16,7 +18,7 @@ def load_planes(base_dir, scene_id):
         vertexs [numpy float array], [V * 3]: [vertexs]
         faces [numpy int array], [F * 3]: [faces]
         norms [numpy float array], [F * 3]: [norms of each face]
-        labels [numpy int array], [F * 1]: [labels of each face]
+        labels [numpy int array], [F]: [labels of each face]
     """
 
     full_name_ply = os.path.join(base_dir, scene_id + '.ply')
@@ -55,9 +57,47 @@ def load_planes(base_dir, scene_id):
     labels = np.array(labels, dtype='int32')
     return vertexs, faces, norms, labels
 
+def save_floorplan(save_place, points, edges, labels):
+    """Save the floorplan of the scene
+        P: number of points in the floor plan
+        E: number of edges in the floor plan
+        
+    Args:
+        save_place [string]: [the saving place of the floorplan]
+        points [numpy float array], [P * 2]: [points in the 2d floor plan]
+        edges [numpy int array], [E * 2]: [the id of the start and end points in the 2d floor plan]
+        edge_labels [numpy int array], [E]: [the labels of each edges]
+    """
+    save_dict = {'points': points.tolist(), 'edges': edges.tolist(), 'labels': labels.tolist()}
+    json_data = json.dumps(save_dict)
+    f = open(save_place, 'w')
+    f.write(json_data)
+    f.close()
+    
+def load_floorplan(save_place):
+    """Load the floorplan of the scene
+        P: number of points in the floor plan
+        E: number of edges in the floor plan
+        
+    Args:
+        save_place [string]: [the saving place of the floorplan]
+        
+    Returns:
+        points [numpy float array], [P * 2]: [points in the 2d floor plan]
+        edges [numpy int array], [E * 2]: [the id of the start and end points in the 2d floor plan]
+        edge_labels [numpy int array], [E]: [the labels of each edges]
+    """
+    with open(save_place, 'r', encoding='utf8')as fp:
+        data = json.load(fp)
+    points = data['points']
+    edges = data['edges']
+    edge_labels = data['labels']
+    points = np.array(points, dtype=np.float32)
+    edges = np.array(edges, dtype=np.int32)
+    edge_labels = np.array(edge_labels, dtype=np.int32)
+    return points, edges, edge_labels
 
-
-def get_floorplan(vertexs, faces, norms, labels, threshold_norm=0.1, threshold_bottom=0.2):
+def get_floorplan(vertexs, faces, norms, labels, threshold_norm=0.1, threshold_bottom=0.5):
     """Get the floorplan of the scene
         V: number of vertexs of 3D model
         F: number of faces of 3D model
@@ -68,14 +108,14 @@ def get_floorplan(vertexs, faces, norms, labels, threshold_norm=0.1, threshold_b
         vertexs [numpy float array], [V * 3]: [vertexs]
         faces [numpy int array], [F * 3]: [faces]
         norms [numpy float array], [F * 3]: [norms of each face]
-        labels [numpy int array], [F * 1]: [labels of each face]
+        labels [numpy int array], [F]: [labels of each face]
         threshold_norm [float, 0.1 by default]: [the threshold that marks that the plane is a wall]
         threshold_bottom [float, 0.2 by default]: [the threshold that marks that the point is at the bottom]
 
     Returns:
         points [numpy float array], [P * 2]: [points in the 2d floor plan]
         edges [numpy int array], [E * 2]: [the id of the start and end points in the 2d floor plan]
-        edge_labels [numpy int array], [E * 1]: [the labels of each edges]
+        edge_labels [numpy int array], [E]: [the labels of each edges]
     """
     V = vertexs.shape[0]
     F = faces.shape[0]
@@ -83,15 +123,15 @@ def get_floorplan(vertexs, faces, norms, labels, threshold_norm=0.1, threshold_b
     
     #get the walls and their points
     for i in range(F):
-        label = int(labels[i, 0])
+        label = int(labels[i])
         face = faces[i]
         a = int(face[0])
         b = int(face[1])
         c = int(face[2])
         nz = norms[i, 2]
-        if abs(nz) <= threshold_norm:
+        if label != 0 and abs(nz) <= threshold_norm:
             if not label in wall_points.keys():
-                wall_points[label] = {}
+                wall_points[label] = set()
             wall_points[label].add(a)
             wall_points[label].add(b)
             wall_points[label].add(c)
@@ -99,7 +139,7 @@ def get_floorplan(vertexs, faces, norms, labels, threshold_norm=0.1, threshold_b
     walls_old = []
     edge_labels = []
     point_pair = {}
-    useful_points = {}
+    useful_points = set()
     for label in wall_points.keys():
         points = wall_points[label]
         up_list = []
@@ -111,8 +151,7 @@ def get_floorplan(vertexs, faces, norms, labels, threshold_norm=0.1, threshold_b
             else:
                 up_list.append(point)
         if len(up_list) != len(down_list):
-            print('Error!')
-            return
+            return [], [], []
 
         #allocate the point pairs
         for down in down_list:
@@ -136,8 +175,8 @@ def get_floorplan(vertexs, faces, norms, labels, threshold_norm=0.1, threshold_b
         end_id = -1
         min_x = inf 
         min_y = inf 
-        max_x = inf 
-        max_y = inf 
+        max_x = -inf
+        max_y = -inf 
         argmin_x = -1 
         argmin_y = -1 
         argmax_x = -1
@@ -166,7 +205,7 @@ def get_floorplan(vertexs, faces, norms, labels, threshold_norm=0.1, threshold_b
             start_id = argmin_x
             end_id = argmax_x
         walls_old.append([start_id, end_id])
-        edge_labels.append([int(label)])
+        edge_labels.append(label)
         useful_points.add(start_id)
         useful_points.add(end_id)
     
@@ -175,7 +214,7 @@ def get_floorplan(vertexs, faces, norms, labels, threshold_norm=0.1, threshold_b
     edges = []
     new_index_for_points = {}
     for down in useful_points:
-        up = point_pair[point]
+        up = point_pair[down]
         down_x = float(vertexs[down, 0])
         down_y = float(vertexs[down, 1])
         up_x = float(vertexs[up, 0])
@@ -185,7 +224,7 @@ def get_floorplan(vertexs, faces, norms, labels, threshold_norm=0.1, threshold_b
         points.append([new_x, new_y])
         new_index_for_points[down] = len(points) - 1
     
-    for i in range(walls_old):
+    for i in range(len(walls_old)):
         wall_old = walls_old[i]
         start = wall_old[0]
         end = wall_old[1]
@@ -196,8 +235,39 @@ def get_floorplan(vertexs, faces, norms, labels, threshold_norm=0.1, threshold_b
     points = np.array(points, dtype=np.float32)
     edges = np.array(edges, dtype=np.int32)
     edge_labels = np.array(edge_labels, dtype=np.int32)
+
+    
     return points, edges, edge_labels
     
-    
-        
-    
+def main():
+    """The main function
+    """
+    parser = argparse.ArgumentParser(description = '')
+    #parser.add_argument('--base_dir', default='/home1/shenguanlin/scannet_planes', type=str)
+    parser.add_argument('--base_dir', default='G:\\dataset\\scannet_planes_mine', type=str)
+
+    args = parser.parse_args()
+    full_name_list = glob.glob(os.path.join(args.base_dir, '*.ply'))
+    scene_id_list = []
+    for full_name in full_name_list:
+        scene_id = full_name.split(os.sep)[-1][:-4]
+        if scene_id[-5:] == '_full':
+            continue
+        scene_id_list.append(scene_id)
+    scene_id_list.sort()
+    right_num = 0
+    wrong_num = 0
+    for scene_id in scene_id_list:
+        save_place = os.path.join(args.base_dir, scene_id + '_floor_plan.json')
+        vertexs, faces, norms, labels = load_planes(args.base_dir, scene_id)
+        points, edges, edge_labels = get_floorplan(vertexs, faces, norms, labels)
+        if len(points) > 0:
+            save_floorplan(save_place, points, edges, edge_labels)
+            print('Rendered', scene_id)
+            right_num += 1
+        else:
+            print('Error in rendering', scene_id)
+            wrong_num += 1
+    print(right_num, wrong_num)
+if __name__ == "__main__":
+    main()
