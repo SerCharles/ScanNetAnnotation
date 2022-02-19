@@ -58,7 +58,7 @@ def main():
     """The main function of segmentation generation
     """
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--base_dir', default='/home1/shenguanlin/scannet_mine', type=str)
+    parser.add_argument('--base_dir', default='/home1/sgl/scannet_mine', type=str)
     args = parser.parse_args()
 
     for name in glob.glob(os.path.join(args.base_dir, '*')):

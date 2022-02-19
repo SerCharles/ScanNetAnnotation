@@ -177,6 +177,50 @@ def load_ply(model_path):
     return vertexs, faces, norms, colors
 
 
+def load_ply_without_norm(model_path):
+    """Load the ply file with points with color, and faces
+        V: number of vertexs
+        F: number of faces
+
+    Args:
+        model_path [string]: [the full path of the model]
+
+    Returns:
+        vertexs [numpy float array], [V * 3]: [vertexs]
+        faces [numpy int array], [F * 3]: [faces]
+        colors [numpy float array], [V * 3]: [colors of each vertex, divided by 256]
+    """
+    plydata = PlyData.read(model_path)
+    my_vertexs = []
+    my_colors = []
+    my_faces = []
+
+    vertexs = plydata['vertex']
+    faces = plydata['face']
+    for i in range(vertexs.count):
+        x = float(vertexs[i][0])
+        y = float(vertexs[i][1])
+        z = float(vertexs[i][2])
+        r = float(vertexs[i][3]) / 256
+        g = float(vertexs[i][4]) / 256
+        b = float(vertexs[i][5]) / 256
+
+        my_vertexs.append([x, y, z])
+        my_colors.append([r, g, b])
+
+
+    for i in range(faces.count):
+        a = int(faces[i][0][0])
+        b = int(faces[i][0][1])
+        c = int(faces[i][0][2])
+        my_faces.append([a, b, c])
+    
+    vertexs = np.array(my_vertexs, dtype='float32')
+    faces = np.array(my_faces, dtype='int32')
+    colors = np.array(my_colors, dtype='float32')
+    return vertexs, faces, colors
+
+
 
 def load_planes(base_dir, scene_id):
     """Load the ScanNet-Planes dataset

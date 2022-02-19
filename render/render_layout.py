@@ -122,8 +122,8 @@ def main():
     """The main function of layout data rendering
     """
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--base_dir_scannet', default='/home1/shenguanlin/scannet_mine', type=str)
-    parser.add_argument('--base_dir_plane', default='/home1/shenguanlin/scannet_planes', type=str)
+    parser.add_argument('--base_dir_scannet', default='/home1/sgl/scannet_mine', type=str)
+    parser.add_argument('--base_dir_plane', default='/home1/sgl/scannet_planes_mine', type=str)
     parser.add_argument('--scene_id', default='scene0000_01', type=str)
     args = parser.parse_args()
 

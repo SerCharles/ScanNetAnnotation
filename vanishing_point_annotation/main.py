@@ -8,7 +8,7 @@ import numpy as np
 import utils
 import data_utils
 import time
-import random 
+import lib.cuda_caller
 
 def annotation_one_picture(base_dir, save_dir, scene_id, id, ceiling_id, floor_id):
     """Annotate one picture
@@ -24,16 +24,19 @@ def annotation_one_picture(base_dir, save_dir, scene_id, id, ceiling_id, floor_i
     intrinsic, extrinsic, layout_seg = data_utils.load_data(base_dir, scene_id, id)
     H, W = layout_seg.shape
     start = time.time()
-    vanishing_point = utils.get_vanishing_point(H, W, intrinsic, extrinsic)
-    vy = float(vanishing_point[0])
-    if vy > H - 1 or vy < 0:
-        boundary_angles, boundary_segs = utils.get_wall_boundaries(layout_seg, vanishing_point, ceiling_id, floor_id)
-        wall_segs = utils.get_wall_seg(layout_seg, ceiling_id, floor_id)
-        data_utils.save_boundaries(base_dir, scene_id, id, vanishing_point, boundary_angles, boundary_segs, wall_segs)
+    vy, vx = utils.get_vanishing_point(H, W, intrinsic, extrinsic)
+    lines = utils.get_lines(H, W, vy, vx)
+    whether_ceilings, whether_floors, whether_walls, ceiling_places, floor_places = \
+        lib.cuda_caller.get_ceiling_and_floor(layout_seg, lines, ceiling_id, floor_id)
+    whether_boundaries = utils.get_wall_boundaries(layout_seg, lines, ceiling_id, floor_id)
+    
     end = time.time()
+    full_save_dir = os.path.join(save_dir, scene_id + "_" + str(id) + '.npz')
+    #data_utils.visualize_annotation_result(full_save_dir, layout_seg, lines, whether_ceilings, whether_floors, whether_walls, whether_boundaries, ceiling_places, floor_places)
+    data_utils.save_annotation_result(full_save_dir, vy, vx, whether_ceilings, whether_floors, whether_walls, whether_boundaries, ceiling_places, floor_places)
     return end - start
 
-def annotation_one_scene(base_dir_scannet, base_dir_plane, scene_id):
+def annotation_one_scene(base_dir_scannet, base_dir_plane, scene_id, start_num, number_per_round):
     """Annotate one scene, 100 once a time
 
     Args:
@@ -59,53 +62,34 @@ def annotation_one_scene(base_dir_scannet, base_dir_plane, scene_id):
         file_name = full_name.split(os.sep)[-1]
         id = int(file_name[:-4].split('_')[-1])
         id_list.append(id)
-    id_list.sort()
+        
     total_time = 0.0
-    for i in range(len(id_list)):
-        id = id_list[i]
+    for i in range(number_per_round):
+        index = start_num + i 
+        if index >= len(id_list):
+            break
+        id = id_list[index]
         dtime = annotation_one_picture(base_dir_scannet, save_dir, scene_id, id, ceiling_id, floor_id)
         total_time += dtime 
     avg_time = total_time / len(id_list)
-    print('Rendered', scene_id)
     print('total time is', total_time, 's')
     print('average time is', avg_time, 's')
-    
-
-
-
-def annotation_all(base_dir_scannet, base_dir_plane, start_id):
-    """Processing all data
-
-    Args:
-        base_dir_scannet [string]: [the base directory of our modified ScanNet dataset]
-        base_dir_plane [string]: [the base directory of our modified ScanNet-Planes dataset]
-        start_id [string]: [the start processing id]
-    """
-    scene_list = []
-    for name in glob.glob(os.path.join(base_dir_scannet, '*')):
-        scene_id = name.split(os.sep)[-1]
-        if scene_id == 'train.txt' or scene_id == 'valid.txt':
-            continue 
-        scene_list.append(scene_id)
-    scene_list.sort()
-    
-    for scene_id in scene_list:
-        if scene_id >= start_id:
-            annotation_one_scene(base_dir_scannet, base_dir_plane, scene_id)
-
-
 
 def main():
     """The main function of vanishing point annotation
     """
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--base_dir_scannet', default='/home2/sgl/scannet_mine', type=str)
-    parser.add_argument('--base_dir_plane', default='/home2/sgl/scannet_planes_mine', type=str)
-    parser.add_argument('--start_id', default='scene0000_01', type=str)
-    args = parser.parse_args()
-    annotation_all(args.base_dir_scannet, args.base_dir_plane, args.start_id)
-    
+    parser.add_argument('--base_dir_scannet', default='/home1/sgl/scannet_mine', type=str)
+    parser.add_argument('--base_dir_plane', default='/home1/sgl/scannet_planes_mine', type=str)
+    parser.add_argument('--scene_id', default='scene0000_01', type=str)
+    parser.add_argument('--start_num', default=0, type=int)
+    parser.add_argument('--number_per_round', default=100, type=int)
 
+
+    args = parser.parse_args()
+    if args.start_num == 0:
+        print('Rendering', args.scene_id)
+    annotation_one_scene(args.base_dir_scannet, args.base_dir_plane, args.scene_id, args.start_num, args.number_per_round)
 
     
 

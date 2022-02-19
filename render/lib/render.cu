@@ -97,15 +97,19 @@ __global__ void Render_gpu(glm::vec3* positions, glm::ivec3* indices, int* color
 
 
 	//如果三个端点深度都是负数，那么一定不可见--剪枝。之前或逻辑并不对
-	/*if (p1.z < 0.0001 || p2.z < 0.0001 || p3.z < 0.0001)
+	/*
+	if (p1.z < 0.0001 || p2.z < 0.0001 || p3.z < 0.0001)
 	{
 		return;
-	}*/
+	}
+	*/
 	//改变了剪枝逻辑
+	
 	if (p1.z < 0.0001 && p2.z < 0.0001 && p3.z < 0.0001)
 	{
 		return;
 	}
+	
 
 	p1.z = 1.0f / p1.z;
 	p2.z = 1.0f / p2.z;
@@ -119,7 +123,8 @@ __global__ void Render_gpu(glm::vec3* positions, glm::ivec3* indices, int* color
 	p3.y = p3.y * p3.z;
 
 	//这段代码不对：虽然X，Y是凸的，但是这里的值实际上是X/Z，Y/Z不是凸的，因此这样找min max不对（当然稠密mesh这样近似是对的）
-	/*int minX = (MIN(p1.x, MIN(p2.x, p3.x)) * fx + cx);
+	/*
+	int minX = (MIN(p1.x, MIN(p2.x, p3.x)) * fx + cx);
 	int minY = (MIN(p1.y, MIN(p2.y, p3.y)) * fy + cy);
 	int maxX = (MAX(p1.x, MAX(p2.x, p3.x)) * fx + cx) + 0.999999f;
 	int maxY = (MAX(p1.y, MAX(p2.y, p3.y)) * fy + cy) + 0.999999f;
@@ -148,7 +153,7 @@ __global__ void Render_gpu(glm::vec3* positions, glm::ivec3* indices, int* color
 		maxX = MIN(width, maxX);
 		maxY = MIN(height, maxY);
 	}
-
+	
 
 
 

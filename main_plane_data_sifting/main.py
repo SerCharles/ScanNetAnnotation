@@ -148,13 +148,12 @@ def main():
     """The main function
     """
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--base_dir', default='/home2/sgl/scannet_mine', type=str)
-    parser.add_argument('--save_dir', default='/home2/sgl/data_test', type=str)
+    parser.add_argument('--base_dir', default='/home1/sgl/scannet_mine', type=str)
+    parser.add_argument('--save_dir', default='/home1/sgl/data_test', type=str)
     parser.add_argument('--start_id', default='scene0000_01', type=str)
     args = parser.parse_args()
     process_all(args.base_dir, args.save_dir, args.start_id)
 
 if __name__ == "__main__":
     main()
-    #process_one_scene('/home2/sgl/scannet_mine', 'scene0000_01', '/home2/sgl/data_test')
             

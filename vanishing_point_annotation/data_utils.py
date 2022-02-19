@@ -3,8 +3,7 @@
 import os
 import numpy as np
 from PIL import Image
-from numpy.lib import utils
-import utils
+
 
 def load_image(file_name):
     """load a RGB image
@@ -98,53 +97,76 @@ def load_data(base_dir, scene_id, id):
     
     return intrinsic, extrinsic, layout_seg
 
-def save_boundaries(base_dir, scene_id, id, vanishing_point, boundary_angles, boundary_segs, wall_seg):
-    """Save the boundary data
+def save_annotation_result(full_save_dir, vanishing_y, vanishing_x, whether_ceilings, whether_floors, whether_walls, whether_boundaries, ceiling_places, floor_places):
+    """Save the annotation result
 
     Args:
-        base_dir [string]: [the base directory of our modified ScanNet dataset]
-        scene_id [string]: [the scene id to be handled]
-        id [int]: [the id of the picture]        
-        vanishing_point [numpy float array], [2]: [the vanishing point of the picture, (y, x)]    
-        boundary_angles [numpy float array], [M]: [the absolute angles of the boundaries]
-        boundary_segs [numpy int array], [M * 2]: [the left and right seg numbers of the boundaries]
-        wall_seg [numpy bool array], [H * W]: [the pixels whose backgrounds are walls]
+        full_save_dir [string]: [the full place to save the numpy arraus]
+        vanishing_y [float]: [the y of the vanishing point of the picture]    
+        vanishing_x [float]: [the x of the vanishing point of the picture] 
+        whether_ceilings [numpy boolean array], [(2 * W)]: [whether the lines have ceiling]
+        whether_floors [numpy boolean array], [(2 * W)]: [whether the lines have floor]
+        whether_walls [numpy boolean array], [(2 * W)]: [whether the lines have wall]
+        whether_boundaries [numpy boolean array], [(2 * W)]: [whether the lines are wall-wall boundaries]
+        ceiling_places [numpy float array], [2 * (2 * W)]: [the ceiling place of each line, (y, x)]
+        floor_places [numpy float array], [2 * (2 * W)]: [the floor place of each line, (y, x)]
     """
-    save_dir_npy = os.path.join(base_dir, scene_id, 'boundary')
-    if not os.path.exists(save_dir_npy):
-        os.mkdir(save_dir_npy)
-    save_place_npy = os.path.join(save_dir_npy, scene_id + '_' + str(id) + '.npz')
-    np.savez(save_place_npy, vanishing_point=vanishing_point, boundary_angles=boundary_angles, boundary_segs=boundary_segs)
-    save_dir_seg = os.path.join(base_dir, scene_id, 'wall_seg')
-    if not os.path.exists(save_dir_seg):
-        os.mkdir(save_dir_seg)
-    save_place_seg = os.path.join(save_dir_seg, scene_id + '_' + str(id) + '.png')
-    picture_boundary = wall_seg.astype(np.uint16)
-    picture_boundary = Image.fromarray(picture_boundary)
-    picture_boundary.save(save_place_seg)
+    vanishing_point = np.zeros((2), dtype=np.float32)
+    vanishing_point[0] = vanishing_y
+    vanishing_point[1] = vanishing_x
+    np.savez(full_save_dir, vanishing_point=vanishing_point, whether_ceilings=whether_ceilings, whether_floors=whether_floors, whether_walls=whether_walls, \
+        whether_boundaries=whether_boundaries, ceiling_places=ceiling_places, floor_places=floor_places)
 
-
-def visualize_boundaries(save_dir, base_name, vanishing_point, boundary_probability_per_pixel, layout_seg):
-    """Visualize the boundaries
+def visualize_annotation_result(full_save_dir, layout_seg, lines, whether_ceilings, whether_floors, whether_walls, whether_boundaries, ceiling_places, floor_places):
+    """Visualize the annotation result
 
     Args:
-        save_dir [string]: [the base save directory of the data]
-        base_name [string]: [the base name of the picture]
-        vanishing_point [numpy float array], [2]: [the vanishing point of the picture, (y, x)]    
-        boundary_probability_per_pixel [numpy float array], [H * W]: [whether each pixels are boundaries]
+        full_save_dir [string]: [the full place to save the picture]
         layout_seg [numpy int array], [H * W]: [the layout segmentation of the picture]
+        lines [float array], [(2 * W) * 2]: [the sampled lines, the four instances are top_x, bottom_x]
+        whether_ceilings [numpy boolean array], [(2 * W)]: [whether the lines have ceiling]
+        whether_floors [numpy boolean array], [(2 * W)]: [whether the lines have floor]
+        whether_walls [numpy boolean array], [(2 * W)]: [whether the lines have wall]
+        whether_boundaries [numpy boolean array], [(2 * W)]: [whether the lines are wall-wall boundaries]
+        ceiling_places [numpy float array], [2 * (2 * W)]: [the ceiling place of each line, (y, x)]
+        floor_places [numpy float array], [2 * (2 * W)]: [the floor place of each line, (y, x)]
     """
     H, W = layout_seg.shape
-    full_save_dir_seg = os.path.join(save_dir, base_name + '_seg.png')
-    full_save_dir_prob = os.path.join(save_dir, base_name + '_prob.png')
-    final_color_seg = (layout_seg * 3000).astype(np.uint16)
-    final_color_prob = (boundary_probability_per_pixel * 60000).astype(np.uint16)
-    picture_seg = Image.fromarray(final_color_seg)
-    picture_seg.save(full_save_dir_seg)
-    picture_prob = Image.fromarray(final_color_prob)
-    picture_prob.save(full_save_dir_prob)
-    print('Written', base_name)
-        
-    
-        
+    final_color = layout_seg * 3000
+
+    for i in range(2 * W):
+        if whether_ceilings[i] == True:
+            y = int(ceiling_places[0, i])
+            x = int(ceiling_places[1, i])
+            if x >= 0 and x < W and y >= 0 and y < H:
+                final_color[y, x] = 65535
+        if whether_floors[i] == True:
+            y = int(floor_places[0, i])
+            x = int(floor_places[1, i])
+            if x >= 0 and x < W and y >= 0 and y < H:
+                final_color[y, x] = 65535
+
+    for i in range(len(lines)):
+        if whether_boundaries[i] != True:
+            continue
+        line = lines[i]
+        top_x, bottom_x = line 
+        top_y = 0.0
+        bottom_y = H - 1 + 0.0
+        dy = 1.0
+        dx = (bottom_x - top_x) / bottom_y 
+        current_x = top_x 
+        current_y = top_y
+        for j in range(H):
+            axis_x = int(current_x)
+            axis_y = int(current_y)
+            if axis_x >= 0 and axis_x < W and axis_y >= 0 and axis_y < H and layout_seg[axis_y, axis_x] > 0:
+                final_color[axis_y, axis_x] = 65535
+            current_y += dy
+            current_x += dx 
+
+
+    final_color = final_color.astype(np.uint16)
+    picture = Image.fromarray(final_color)
+    picture.save(full_save_dir)
     

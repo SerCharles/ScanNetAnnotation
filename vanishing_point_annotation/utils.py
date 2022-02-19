@@ -15,7 +15,8 @@ def get_vanishing_point(H, W, intrinsic, extrinsic):
         extrinsic [numpy float array], [4 * 4]: [the extrinsic of the picture]
         
     Returns:
-        vanishing_point [numpy float array], [2]: [the vanishing point of the picture, (y, x)]    
+        vanishing_y [float]: [the x of the vanishing point of the picture]    
+        vanishing_x [float]: [the y of the vanishing point of the picture]   
     """
     rotation = extrinsic[0:3, 0:3] #3 * 3
     fx = intrinsic[0, 0]
@@ -29,25 +30,137 @@ def get_vanishing_point(H, W, intrinsic, extrinsic):
     dz = d_world[2]
     vanishing_x = fx * dx / dz + cx 
     vanishing_y = fy * dy / dz + cy 
-    vanishing_point = np.array([vanishing_y, vanishing_x], dtype=np.float32)
-    return vanishing_point
+    return vanishing_y, vanishing_x
 
 
-def get_wall_boundaries(layout_seg, vanishing_point, ceiling_id, floor_id):
-    """Get the wall-wall boundaries 
+def get_lines(H, W, vanishing_y, vanishing_x):
+    """Get the lines from the vanishing point to each top and bottom points 
+
+    Args:
+        H [int]: [the height of the picture]
+        W [int]: [the width of the picture]
+        vanishing_y [float]: [the y of the vanishing point of the picture]    
+        vanishing_x [float]: [the x of the vanishing point of the picture] 
+
+    Return:
+        lines [float array], [(2 * W) * 2]: [the sampled lines, the four instances are top_x, bottom_x]
+    """
+    lines = []
+    current_y = 0 
+    for current_x in range(W):
+        dy = vanishing_y - current_y
+        dx = vanishing_x - current_x
+        dx = dx / dy 
+        dy = 1.0
+        top_x = current_x + 0.0
+        top_y = current_y + 0.0
+        bottom_x = top_x + dx * (H - 1)
+        bottom_y = H - 1 + 0.0
+        line = [top_x, bottom_x]
+        lines.append(line)
+
+    current_y = H - 1
+    for current_x in range(W):
+        dy = vanishing_y - current_y
+        dx = vanishing_x - current_x
+        dx = dx / dy 
+        dy = 1.0
+        bottom_x = current_x + 0.0
+        bottom_y = current_y + 0.0
+        top_x = bottom_x - dx * (H - 1)
+        top_y = 0.0
+        line = [top_x, bottom_x]
+        lines.append(line)
+
+    return lines
+
+def get_ceiling_and_floor(layout_seg, lines, ceiling_id, floor_id):
+    """Get the ceiling place and floor place of each line from the vanishing point to the picture, and also whether there are ceiling and floor 
         H: the height of the picture
         W: the width of the picture
-        M: the number of boundaries
-        
+
     Args:
         layout_seg [numpy int array], [H * W]: [the layout segmentation of the picture]
-        vanishing_point [numpy float array], [2]: [the vanishing point of the picture, (y, x)]    
+        lines [float array], [(2 * W) * 2]: [the sampled lines, the four instances are top_x, bottom_x]
         ceiling_id [int]: [the id of the plane which is the ceiling]
         floor_id [int]: [the id of the plane which is the floor]
 
     Return:
-        boundary_angles [numpy float array], [M]: [the absolute angles of the boundaries]
-        boundary_segs [numpy int array], [M * 2]: [the left and right seg numbers of the boundaries]
+        whether_ceilings [numpy boolean array], [(2 * W)]: [whether the lines have ceiling]
+        whether_floors [numpy boolean array], [(2 * W)]: [whether the lines have floor]
+        whether_walls [numpy boolean array], [(2 * W)]: [whether the lines have wall]
+        ceiling_places [numpy float array], [2 * (2 * W)]: [the ceiling place of each line, (y, x)]
+        floor_places [numpy float array], [2 * (2 * W)]: [the floor place of each line, (y, x)]
+    """
+    H, W =  layout_seg.shape
+    whether_ceilings = np.zeros((2 * W), dtype=np.bool)
+    ceiling_places = np.zeros((2, 2 * W), dtype=np.float32)
+    whether_floors = np.zeros((2 * W), dtype=np.bool)
+    floor_places = np.zeros((2, 2 * W), dtype=np.float32)
+    whether_walls = np.zeros((2 * W), dtype=np.bool)
+
+    for i in range(len(lines)):
+        line = lines[i]
+        top_x, bottom_x = line 
+        top_y = 0.0
+        bottom_y = H - 1 + 0.0
+        dy = 1.0
+        dx = (bottom_x - top_x) / bottom_y 
+        whether_ceiling = False 
+        whether_floor = False 
+        whether_wall = False
+        ceiling_x = top_x
+        ceiling_y = top_y 
+        floor_x = bottom_x
+        floor_y = bottom_y 
+
+        current_x = top_x 
+        current_y = top_y
+        for j in range(H):
+            axis_x = int(current_x)
+            axis_y = int(current_y)
+            if axis_x < 0 or axis_x >= W or axis_y < 0 or axis_y >= H or layout_seg[axis_y, axis_x] <= 0:
+                pass
+            elif layout_seg[axis_y, axis_x] == ceiling_id:
+                whether_ceiling = True 
+                if current_y > ceiling_y: 
+                    ceiling_x = current_x
+                    ceiling_y = current_y 
+            elif layout_seg[axis_y, axis_x] == floor_id:
+                whether_floor = True 
+                if current_y < floor_y:
+                    floor_x = current_x 
+                    floor_y = current_y 
+            else: 
+                whether_wall = True 
+            current_x += dx 
+            current_y += dy
+            
+        whether_ceilings[i] = whether_ceiling
+        whether_floors[i] = whether_floor
+        whether_walls[i] = whether_wall
+        ceiling_places[0][i] = ceiling_y
+        ceiling_places[1][i] = ceiling_x 
+        floor_places[0][i] = floor_y
+        floor_places[1][i] = floor_x
+    
+    return whether_ceilings, whether_floors, whether_walls, ceiling_places, floor_places
+
+
+
+
+
+def get_wall_boundaries(layout_seg, lines, ceiling_id, floor_id):
+    """Get the wall-wall boundaries 
+
+    Args:
+        layout_seg [numpy int array], [H * W]: [the layout segmentation of the picture]
+        lines [float array], [(2 * W) * 2]: [the sampled lines, the four instances are top_x, bottom_x]
+        ceiling_id [int]: [the id of the plane which is the ceiling]
+        floor_id [int]: [the id of the plane which is the floor]
+
+    Return:
+        whether_boundaries [numpy boolean array], [(2 * W)]: [whether the lines are wall-wall boundaries]
     """
     H, W = layout_seg.shape
     layout_seg_left = layout_seg[:, 0:W - 1]
@@ -67,8 +180,8 @@ def get_wall_boundaries(layout_seg, vanishing_point, ceiling_id, floor_id):
     boundary_x = x_indices[whether_boundary]
     num_boundary = boundary_y.shape[0]
     
-    boundary_angles = []
-    boundary_segs = []
+    
+    whether_boundaries = np.zeros((2 * W), dtype=np.bool)
     max_id = np.max(layout_seg)
     boundaries = []
     for i in range((max_id + 1) ** 2):
@@ -82,164 +195,57 @@ def get_wall_boundaries(layout_seg, vanishing_point, ceiling_id, floor_id):
         seg = left_seg * (max_id + 1) + right_seg
         boundaries[seg].append([by, bx])
     
+        
     for i in range(len(boundaries)):
-        the_boundaries = boundaries[i]
-        if len(the_boundaries) > H / 25:
-            angles_total = 0.0
-            for point in the_boundaries:
-                y, x = point 
-                vy = float(vanishing_point[0])
-                vx = float(vanishing_point[1])
-                dx = vx - x 
-                dy = vy - y
-                angle = acos(dx / sqrt(dx ** 2 + dy ** 2))
-                angles_total += angle
-            avg_angle = angles_total / len(the_boundaries)
-            left_seg = i // (max_id + 1)
-            right_seg = i % (max_id + 1)
-            boundary_angles.append(avg_angle)
-            boundary_segs.append([left_seg, right_seg])
-    
-    boundary_angles = np.array(boundary_angles, dtype=np.float32)
-    boundary_segs = np.array(boundary_segs, dtype=np.int32)
-    return boundary_angles, boundary_segs
+        boundary = boundaries[i]
+        if len(boundary) > (H / 50):
+            np_boundary = np.array(boundary)
+            y = np_boundary[:, 0].reshape(-1, 1)
+            x = np_boundary[:, 1]
+            reg = LinearRegression().fit(y, x)
+            k = reg.coef_[0]
+            b = reg.intercept_ #ky - x + b = 0
 
+            min_distance = sqrt(W ** 2 + H ** 2)
+            best_id = -1
 
-def get_whether_boundaries(H, W, vanishing_point, boundary_angles):
-    """Get whether the lines are boundaries
+            for j in range(W):
+                line = lines[j]
+                top_x, bottom_x = line 
+                dist_top = abs((k * 0.0 - top_x + b) / sqrt(k ** 2 + 1))
+                dist_bottom = abs((k * (H - 1) - bottom_x + b) / sqrt(k ** 2 + 1))
+                dist = (dist_top + dist_bottom) / 2
+                if dist < min_distance:
+                    min_distance = dist 
+                    best_id = j 
+                    
+            if best_id == 0 or best_id == W - 1:
+                dist_threshold = 5.0
+            else:
+                dist_threshold = 15.0
+                
+            if best_id >= 0 and best_id < W and min_distance < dist_threshold:
+                whether_boundaries[best_id] = True 
+            
 
-    Args:
-        H [int]: [the height of the picture]
-        W [int]: [the width of the picture]
-        vanishing_point [numpy float array], [2]: [the vanishing point of the picture, (y, x)]    
-        boundary_angles [numpy float array], [M]: [the absolute angles of the boundaries]
-        
-    Returns:
-        whether_boundaries [numpy bool array], [W]: [whether the lines are boundaries]
-    """
-    whether_boundaries = np.zeros(W, dtype=np.bool)
-    M = boundary_angles.shape[0]
-    vy = float(vanishing_point[0])
-    vx = float(vanishing_point[1])
-    if vy > H - 1:
-        y = H - 1
-    else: 
-        y = 0
-    dy = abs(vy - y)
-    for i in range(M):
-        cos_theta = cos(boundary_angles[i])
-        dx = cos_theta * dy / sqrt(1 - cos_theta ** 2)
-        x = int(vx - dx) 
-        if x <= W - 1 and x >= 0:
-            whether_boundaries[x] = True 
+            min_distance = sqrt(W ** 2 + H ** 2)
+            best_id = -1
+            for j in range(W):
+                line = lines[j + W]
+                top_x, bottom_x = line 
+                dist_top = abs((k * 0.0 - top_x + b) / sqrt(k ** 2 + 1))
+                dist_bottom = abs((k * (H - 1) - bottom_x + b) / sqrt(k ** 2 + 1))
+                dist = (dist_top + dist_bottom) / 2
+                if dist < min_distance:
+                    min_distance = dist 
+                    best_id = j 
+                    
+            if best_id == 0 or best_id == W - 1:
+                dist_threshold = 5.0
+            else:
+                dist_threshold = 15.0
+                
+            if best_id >= 0 and best_id < W and min_distance < dist_threshold:
+                whether_boundaries[best_id + W] = True   
+
     return whether_boundaries
-
-def get_wall_seg(layout_seg, ceiling_id, floor_id):
-    """Get the pixels whose backgrounds are walls
-
-    Args:
-        layout_seg [numpy int array], [H * W]: [the layout segmentation of the picture]
-        ceiling_id [int]: [the id of the plane which is the ceiling]
-        floor_id [int]: [the id of the plane which is the floor]
-    
-    Returns:
-        wall_seg [numpy bool array], [H * W]: [the pixels whose backgrounds are walls]
-    """
-    wall_seg = (layout_seg > 0) & (layout_seg != ceiling_id) & (layout_seg != floor_id)
-    return wall_seg
-
-
-def get_boundaries_per_pixel(layout_seg, vanishing_point, boundary_angles, ceiling_id, floor_id):
-    """Get the wall-wall boundaries 
-        H: the height of the picture
-        W: the width of the picture
-        M: the number of boundaries
-        
-    Args:
-        layout_seg [numpy int array], [H * W]: [the layout segmentation of the picture]
-        vanishing_point [numpy float array], [2]: [the vanishing point of the picture, (y, x)] 
-        boundary_angles [numpy float array], [M]: [the absolute angles of the boundaries]   
-        ceiling_id [int]: [the id of the plane which is the ceiling]
-        floor_id [int]: [the id of the plane which is the floor]
-
-    Return:
-        whether_boundary_per_pixel [numpy bool array], [H * W]: [whether each pixels are boundaries]
-    """
-    H, W = layout_seg.shape
-    whether_boundary_per_pixel = np.zeros((H, W), dtype=np.bool)
-    vy = float(vanishing_point[0])
-    vx = float(vanishing_point[1])
-    for i in range(len(boundary_angles)):
-        #get initial place
-        if vy > H - 1:
-            y0 = H - 1
-        else: 
-            y0 = 0
-        dy0 = abs(vy - y0)
-        cos_theta = cos(boundary_angles[i])
-        dx0 = cos_theta * dy0 / sqrt(1 - cos_theta ** 2)
-        x0 = vx - dx0
-        if vy > H - 1:
-            y0 = 0
-            x0 = x0 - dx0 * (H - 1) / dy0 
-        dy = 1.0
-        dx = (vx - x0) / (vy - y0)
-        y = y0 
-        x = x0 
-
-        #iteration
-        for j in range(H):
-            y_place = int(y)
-            x_place = int(x)
-            if y_place >= 0 and y_place < H and x_place >= 0 and x_place < W:
-                seg = layout_seg[y_place, x_place]
-                if seg > 0 and seg != ceiling_id and seg != floor_id:
-                    whether_boundary_per_pixel[y_place, x_place] = True 
-            y += dy 
-            x += dx 
-    return whether_boundary_per_pixel
-
-def get_boundary_probability_per_pixel(layout_seg, vanishing_point, boundary_angles, ceiling_id, floor_id, decay_rate=0.96):
-    """Get the wall-wall boundary probability
-        H: the height of the picture
-        W: the width of the picture
-        M: the number of boundaries
-        
-    Args:
-        layout_seg [numpy int array], [H * W]: [the layout segmentation of the picture]
-        vanishing_point [numpy float array], [2]: [the vanishing point of the picture, (y, x)] 
-        boundary_angles [numpy float array], [M]: [the absolute angles of the boundaries]   
-        ceiling_id [int]: [the id of the plane which is the ceiling]
-        floor_id [int]: [the id of the plane which is the floor]
-
-    Return:
-        boundary_probability_per_pixel [numpy float array], [H * W]: [whether each pixels are boundaries]
-    """
-    H, W = layout_seg.shape
-    M = boundary_angles.shape[0]    
-    if M <= 0:
-        return np.zeros((H, W), dtype=np.float32)
-    vy = float(vanishing_point[0])
-    vx = float(vanishing_point[1])
-    if vy > H - 1:
-        dy = vy - H + 1
-    else:
-        dy = -vy
-    log_decay_rate_angle = pi / asin(1 / sqrt(dy ** 2 + 1)) / 180 * log(decay_rate)
-    
-    
-    x, y = np.meshgrid(np.array([ii for ii in range(W)]), np.array([ii for ii in range(H)])) #H * W
-    x = x.reshape(H * W)
-    y = y.reshape(H * W)
-    dx = -(x - vx) #(H * W)
-    dy = -(y - vy) #(H * W)
-    angles = np.arccos(dx / np.sqrt(dx ** 2 + dy ** 2)) #(H * W)
-    angles = angles.reshape(H * W, 1).repeat(M, axis=1) #(H * W) * M
-    angles_gt = boundary_angles.reshape(1, M).repeat(H * W, axis=0) #(H * W) * M
-    dist_angles = np.abs(angles - angles_gt) #(H * W) * M
-    min_angle = np.min(dist_angles, axis=1).reshape(H, W) #H * W
-    boundary_probability_per_pixel = np.exp(min_angle * 180 / pi * log_decay_rate_angle)
-    mask = (layout_seg > 0) & (layout_seg != ceiling_id) & (layout_seg != floor_id)
-    boundary_probability_per_pixel = boundary_probability_per_pixel * mask 
-    return boundary_probability_per_pixel
-    

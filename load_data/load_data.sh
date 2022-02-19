@@ -3,7 +3,7 @@
 scannet_code=/home/shenguanlin/ScanNet
 base_code=/home/shenguanlin/ScanNetAnnotation/load_data
 base_source=/data/sgl/scannet/scans
-base_target=/home/shenguanlin/scannet_mine
+base_target=/home1/sgl/scannet_mine
 
 mkdir $base_target
 cd $base_target
@@ -15,6 +15,9 @@ cd $base_source
 files=$(ls $folder)
 for file in $files
 do
+    if [ -d "$base_target/$file" ]; then
+        continue
+    fi
     mkdir $base_target/$file 
     mkdir $base_target/$file/ply
 
@@ -40,5 +43,6 @@ do
     sudo chmod -R 777 $base_target
     cd $base_code
     python data_selection.py --base_dir=$base_target --scene_id=$file
+    
 done
 
